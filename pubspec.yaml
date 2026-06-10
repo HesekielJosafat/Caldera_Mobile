@@ -1,0 +1,54 @@
+name: caldera_app
+description: A mobile app for Caldera Resto and Pool
+publish_to: 'none' # karena ini proyek lokal
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  google_fonts: ^8.0.2
+  flutter_svg: ^2.2.4
+  http: ^1.6.0
+  shared_preferences: ^2.5.5
+  provider: ^6.0.5
+  image_picker: ^1.2.2
+  intl: ^0.18.0
+  fl_chart: ^1.2.0
+  url_launcher: ^6.3.2
+  path_provider: ^2.1.5
+  permission_handler: ^12.0.1
+  open_filex: ^4.7.0
+  font_awesome_flutter: ^10.8.0
+  timeago: ^3.6.1
+  pinput: ^3.0.1
+  firebase_core: ^4.10.0
+  firebase_messaging: ^16.3.0
+  flutter_local_notifications: ^22.0.0
+  flutter_app_badger: ^1.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    #- assets/fonts/
+    - assets/icons/
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/Caldera_App_Icon.jpeg" # Sesuaikan dengan nama dan lokasi file gambar Anda
+  # Jika logo Anda punya background transparan, Anda bisa menambahkan warna background untuk Android:
+  # adaptive_icon_background: "#FFFFFF" 
+  # adaptive_icon_foreground: "assets/logo.png"

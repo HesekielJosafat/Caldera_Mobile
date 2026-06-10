@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "994274291126",
+    "project_id": "caldera-resto",
+    "storage_bucket": "caldera-resto.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:994274291126:android:735fe1935580a89a3e6517",
+        "android_client_info": {
+          "package_name": "com.example.caldera_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAO8BIrs4peeNK2uFMrJu5UL0-519vOl5I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
