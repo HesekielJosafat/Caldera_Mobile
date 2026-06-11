@@ -397,7 +397,7 @@ class ApiService {
   
   Future<List<dynamic>> getPromos() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/promos'), headers: await _getHeaders());
+      final response = await http.get(Uri.parse('$baseUrl/promo'), headers: await _getHeaders());
       final data = jsonDecode(response.body);
       return data['data'] ?? [];
     } catch (e) {
