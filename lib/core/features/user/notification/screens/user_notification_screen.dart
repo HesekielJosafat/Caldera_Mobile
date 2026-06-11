@@ -238,13 +238,10 @@ class _UserNotificationScreenState extends State<UserNotificationScreen> {
                           ),
 
                           onTap: () async {
-                            // Nanti jika sudah ada API markAsRead:
-                            //
-                            // await _apiService.markNotificationAsRead(
-                            //   notif['id'],
-                            // );
-                            //
-                            // _fetchNotifications();
+                            if (isUnread) {
+                              await _apiService.markNotificationAsRead(notif['id'].toString());
+                              _fetchNotifications(); // Refresh list agar tulisan "NEW" merah hilang
+                            }
                           },
                         ),
                       );

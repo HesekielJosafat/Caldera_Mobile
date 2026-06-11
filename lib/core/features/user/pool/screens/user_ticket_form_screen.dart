@@ -547,7 +547,7 @@ class _UserTicketFormScreenState extends State<UserTicketFormScreen> {
       // BOTTOM NAVBAR
       // ==========================================
       bottomNavigationBar: CustomBottomNavBar(
-        selectedIndex: 0, 
+        selectedIndex: 1, 
         onItemTapped: (index) {
           Navigator.pushAndRemoveUntil(
             context,

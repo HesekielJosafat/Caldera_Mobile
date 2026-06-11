@@ -55,6 +55,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     setState(() => _isLoading = true);
     
     final result = await ApiService().verifyOtp(_otpController.text);
+
+    if (!mounted) return;
     
     setState(() => _isLoading = false);
 
@@ -63,12 +65,16 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         const SnackBar(content: Text('Verifikasi Berhasil!'), backgroundColor: Colors.green)
       );
       
-      // MENGARAHKAN LANGSUNG KE HALAMAN BERANDA (MENGHAPUS HISTORI HALAMAN SEBELUMNYA)
-      Navigator.pushAndRemoveUntil(
-        context, 
-        MaterialPageRoute(builder: (context) => const MainUserScreen()), 
-        (route) => false,
-      );
+      // 👇 MEMBERI WAKTU JEDA AGAR ANIMASI BERJALAN MULUS SEBELUM PINDAH 👇
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) {
+          Navigator.pushAndRemoveUntil(
+            context, 
+            MaterialPageRoute(builder: (context) => const MainUserScreen()), 
+            (route) => false,
+          );
+        }
+      });
       
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

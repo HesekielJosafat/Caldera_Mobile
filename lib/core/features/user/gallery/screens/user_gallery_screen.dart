@@ -397,7 +397,11 @@ class _UserGalleryScreenState extends State<UserGalleryScreen> {
                       itemCount: displayedImages.length,
                       itemBuilder: (context, index) {
                         final imageItem = displayedImages[index];
-                        final String imageUrl = imageItem['image_url'] ?? imageItem['url'] ?? imageItem['file_path'] ?? '';
+                        // 👇 1. PERBAIKAN: MERAKIT PATH GAMBAR MENJADI URL UTUH DARI HOSTING 👇
+                        String imageUrl = imageItem['image_url'] ?? imageItem['url'] ?? imageItem['file_path'] ?? '';
+                        if (imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
+                          imageUrl = '${ApiService.baseUrl.replaceAll('/api', '')}/storage/$imageUrl';
+                        }
 
                         return ClipRRect(
                           borderRadius: BorderRadius.circular(12),

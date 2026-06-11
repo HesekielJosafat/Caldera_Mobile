@@ -64,7 +64,7 @@ class _MainUserScreenState extends State<MainUserScreen> {
     if (userStr != null) {
       final userData = jsonDecode(userStr);
 
-      if (userData['email_verified_at'] == null) {
+      if (userData['otp_verified'] == false || userData['otp_verified'] == 'false' || userData['otp_verified'] == null) {
         if (mounted) {
           // Tampilkan pesan error
           ScaffoldMessenger.of(context).showSnackBar(

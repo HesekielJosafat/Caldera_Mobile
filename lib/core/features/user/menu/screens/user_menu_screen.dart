@@ -82,7 +82,7 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
     return Column(
       children: [
         Expanded(
-          // 👇 BUNGKUS DENGAN REFRESH INDICATOR UNTUK PULL-TO-REFRESH DI HALAMAN MENU 👇
+          // BUNGKUS DENGAN REFRESH INDICATOR UNTUK PULL-TO-REFRESH DI HALAMAN MENU
           child: RefreshIndicator(
             color: primaryNavy,
             onRefresh: _fetchMenuFromApi, // Pemicu ambil data baru
@@ -208,14 +208,20 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
                                 
                                 final String namaMenu = item['name'] ?? 'Nama Menu';
                                 final String hargaMenu = item['price']?.toString() ?? '0';
-                                final String imageUrl = item['image_url'] ?? item['image'] ?? '';
+                                
+                                // 👇 1. PERBAIKAN: MERAKIT PATH GAMBAR MENJADI URL UTUH DARI HOSTING 👇
+                                String imageUrl = item['image_url'] ?? item['image'] ?? '';
+                                if (imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
+                                  imageUrl = '${ApiService.baseUrl.replaceAll('/api', '')}/storage/$imageUrl';
+                                }
+
                                 final String descMenu = item['description'] ?? '';
                                 final bool isRecommended = item['is_recommended'] == 1 || item['is_recommended'] == true;
 
                                 return _buildWebStyleCard(
                                   namaMenu: namaMenu,
                                   hargaMenu: hargaMenu,
-                                  imageUrl: imageUrl,
+                                  imageUrl: imageUrl, // Kirim URL utuh
                                   descMenu: descMenu,
                                   isRecommended: isRecommended,
                                 );

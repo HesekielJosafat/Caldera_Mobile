@@ -103,7 +103,7 @@ class _UserPoolScreenState extends State<UserPoolScreen> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(16),
                     child: Image.asset(
-                      'assets/images/2.png', // Fallback gambar lokal Anda
+                      'assets/images/pool1.jpeg', // Fallback gambar lokal Anda
                       height: 200,
                       width: double.infinity,
                       fit: BoxFit.cover,

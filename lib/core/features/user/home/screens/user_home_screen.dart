@@ -232,7 +232,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   }
 
   Widget _buildOffersSection() {
-    final offers = _promos.where((p) => p['is_active'] == 1 && p['promo_type'] != 'event').toList();
+    final offers = _promos.where((p) => (p['is_active'] == 1 || p['is_active'] == true) && p['promo_type'] != 'event').toList();
 
     if (offers.isEmpty) {
       return Center(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:caldera_app/core/services/api_service.dart';
+import 'package:intl/intl.dart'; // 👈 Tambahan import untuk format tanggal
 import '../../../auth/screens/login_screen.dart';
 
 import '../../reservation/screens/user_my_reservations_screen.dart';
@@ -26,6 +27,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   String _userName = "User Name";
   String _userEmail = "user@caldera.com";
   String _userPhone = "";
+  String _memberSince = "-"; // 👈 State untuk Member Since
 
   // Controllers Edit Profile
   final TextEditingController _nameCtrl = TextEditingController();
@@ -82,6 +84,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       _userEmail = data['email'] ?? _userEmail;
       _userPhone = data['phone'] ?? _userPhone;
       
+      // 👇 AMBIL DAN FORMAT TANGGAL CREATED_AT UNTUK MEMBER SINCE 👇
+      if (data['created_at'] != null) {
+        try {
+          DateTime dt = DateTime.parse(data['created_at']).toLocal();
+          _memberSince = DateFormat('dd MMMM yyyy').format(dt); // cth: 11 June 2026
+        } catch (e) {
+          _memberSince = data['created_at'].toString().split('T')[0];
+        }
+      }
+      
       _nameCtrl.text = _userName;
       _phoneCtrl.text = _userPhone == '-' ? '' : _userPhone;
     });
@@ -99,7 +111,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final payload = {
       'name': _nameCtrl.text,
       'phone': _phoneCtrl.text,
-      // Jika Laravel pakai 'update_type' untuk membedakan form
       'update_type': 'profile' 
     };
 
@@ -179,15 +190,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   String _getInitials(String? fullName) {
-    if (fullName == null || fullName.trim().isEmpty) return "U"; // Default U jika kosong
+    if (fullName == null || fullName.trim().isEmpty) return "U"; 
     
-    List<String> nameParts = fullName.trim().split(RegExp(r'\s+')); // Potong berdasarkan spasi
+    List<String> nameParts = fullName.trim().split(RegExp(r'\s+')); 
     
     if (nameParts.length > 1) {
-      // Jika namanya 2 kata atau lebih, ambil huruf pertama dari kata ke-1 dan ke-2
       return (nameParts[0][0] + nameParts[1][0]).toUpperCase();
     } else {
-      // Jika namanya cuma 1 kata (seperti "Test1" atau "Budi"), ambil huruf pertamanya saja
       return nameParts[0][0].toUpperCase();
     }
   }
@@ -196,12 +205,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   Widget build(BuildContext context) {
     const Color primaryNavy = Color(0xFF14334C);
     const Color activeGold = Color(0xFFD4AF37);
-    
-    
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA), 
-      // APPBAR DIHAPUS DI SINI
+      // APPBAR DIHAPUS DI SINI (Ikut MainUserScreen)
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: primaryNavy))
           : SingleChildScrollView(
@@ -227,6 +234,28 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         Text(_userName, style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.bold, color: primaryNavy)),
                         const SizedBox(height: 4),
                         Text(_userEmail, style: GoogleFonts.sora(fontSize: 12, color: Colors.grey.shade600)),
+                        const SizedBox(height: 12),
+                        
+                        // 👇 KARTU LENCANA EMAS MEMBER SINCE DI MOBILE 👇
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: activeGold.withAlpha(25), // Background emas tipis
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: activeGold, width: 1.5),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.calendar_today, color: activeGold, size: 14),
+                              const SizedBox(width: 8),
+                              Text(
+                                "Member Since: $_memberSince",
+                                style: GoogleFonts.sora(fontSize: 11, fontWeight: FontWeight.bold, color: activeGold),
+                              ),
+                            ],
+                          ),
+                        ),
                         const SizedBox(height: 24),
                         
                         // TOMBOL RIWAYAT

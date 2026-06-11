@@ -5,13 +5,9 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  //login dgn emulator:
   // static const String baseUrl = 'http://10.0.2.2:8000/api';
-  //login dgn device fisik:
   // static const String baseUrl = 'http://10.131.121.159:8000/api';
-  // login dgn api laravel :
   // static const String baseUrl = 'http://127.0.0.1:8000/api';
-  // login dgn link hosting :
   // static const String baseUrl = 'http://52.221.212.121/api';
   static const String baseUrl = 'http://caldera-resto-pool.duckdns.org/api';
 
@@ -27,7 +23,6 @@ class ApiService {
   }
   
   // LOGIN
-    // LOGIN
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
       final response = await http.post(
@@ -38,9 +33,6 @@ class ApiService {
           'Accept': 'application/json'
         },
       );
-
-      print('STATUS CODE: ${response.statusCode}');
-      print('RESPONSE BODY: ${response.body}');
       
       final responseData = jsonDecode(response.body);
       
@@ -81,7 +73,7 @@ class ApiService {
     }
   }
   
-  // UPDATE REGISTER: Simpan token jika backend langsung mereturn token setelah register
+  // REGISTER
   Future<Map<String, dynamic>> register(Map<String, dynamic> data) async {
   try {
     final response = await http.post(
@@ -89,16 +81,14 @@ class ApiService {
       body: jsonEncode(data),
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json', // WAJIB TAMBAHKAN INI
+        'Accept': 'application/json',
       },
     );
     
     final responseData = jsonDecode(response.body);
 
-    // Tangkap error validasi dari Laravel (Status Code 422)
     if (response.statusCode == 422) {
       String errorMessage = responseData['message'] ?? 'Validasi gagal';
-      // Ambil pesan error spesifik (misal: "Email sudah terdaftar")
       if (responseData['errors'] != null) {
         errorMessage = responseData['errors'].values.first[0];
       }
@@ -120,21 +110,43 @@ class ApiService {
     }
   }
 
-  // TAMBAHKAN: Fungsi Verifikasi OTP
+  // ==========================================
+  // VERIFIKASI OTP (DENGAN UPDATE MEMORI LOKAL)
+  // ==========================================
   Future<Map<String, dynamic>> verifyOtp(String otp) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/otp/verify'),
-        headers: await _getHeaders(), // Menggunakan JWT Token
+        headers: await _getHeaders(),
         body: jsonEncode({'otp': otp}),
       );
-      return jsonDecode(response.body);
+      
+      final responseData = jsonDecode(response.body);
+
+      // 👇 INI DIA OBAT PENAWARNYA 👇
+      // Jika API membalas sukses, kita WAJIB update memori lokal HP (SharedPreferences)
+      if (response.statusCode == 200 && responseData['success'] == true) {
+        final prefs = await SharedPreferences.getInstance();
+        final userStr = prefs.getString('user');
+        
+        if (userStr != null) {
+          Map<String, dynamic> userData = jsonDecode(userStr);
+          // Ubah status lokal menjadi verified
+          userData['otp_verified'] = true;
+          userData['email_verified_at'] = DateTime.now().toIso8601String();
+          
+          // Simpan kembali ke memori HP
+          await prefs.setString('user', jsonEncode(userData));
+        }
+      }
+
+      return responseData;
     } catch (e) {
       return {'success': false, 'message': 'Network error: $e'};
     }
   }
 
-  // TAMBAHKAN: Fungsi Kirim Ulang OTP
+  // Kirim Ulang OTP
   Future<Map<String, dynamic>> resendOtp() async {
     try {
       final response = await http.post(
@@ -150,8 +162,6 @@ class ApiService {
   // ==========================================
   // FORGOT PASSWORD
   // ==========================================
-  
-  // Minta OTP untuk Reset Password
   Future<Map<String, dynamic>> forgotPassword(String email) async {
     try {
       final response = await http.post(
@@ -168,7 +178,6 @@ class ApiService {
     }
   }
 
-  // Kirim Password Baru beserta OTP
   Future<Map<String, dynamic>> resetPassword(String email, String otp, String newPassword, String confirmPassword) async {
     try {
       final response = await http.post(
@@ -197,7 +206,7 @@ class ApiService {
     await prefs.remove('user');
   }
   
-  // GET PROFILE
+  // SISA FUNGSI LAINNYA TETAP UTUH DAN AMAN
   Future<Map<String, dynamic>> getProfile() async {
     try {
       final response = await http.get(Uri.parse('$baseUrl/profile'), headers: await _getHeaders());
@@ -207,20 +216,17 @@ class ApiService {
     }
   }
 
-  // UPDATE PROFILE & PASSWORD
   Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> data) async {
     try {
       final response = await http.put(
-        Uri.parse('$baseUrl/profile'), // Biasanya method PUT untuk update
+        Uri.parse('$baseUrl/profile'),
         headers: await _getHeaders(),
         body: jsonEncode(data),
       );
       final responseData = jsonDecode(response.body);
       
-      // Jika update berhasil, update juga session lokal agar nama langsung berubah
       if (response.statusCode == 200 && responseData['success'] == true) {
          final prefs = await SharedPreferences.getInstance();
-         // Asumsi Laravel mengembalikan data user terbaru di responseData['user']
          if (responseData['user'] != null) {
            await prefs.setString('user', jsonEncode(responseData['user']));
          }
@@ -231,7 +237,6 @@ class ApiService {
     }
   }
   
-  // GET MENUS
   Future<List<dynamic>> getMenus() async {
     try {
       final response = await http.get(Uri.parse('$baseUrl/menus'), headers: await _getHeaders());
@@ -242,7 +247,6 @@ class ApiService {
     }
   }
   
-  // CREATE RESERVATION
   Future<Map<String, dynamic>> createReservation(Map<String, dynamic> data) async {
     try {
       final response = await http.post(
@@ -251,8 +255,6 @@ class ApiService {
         headers: await _getHeaders()
       );
       
-      // Biasanya response dari controller non-API adalah HTML redirect, 
-      // tapi jika Anda menggunakan API, pastikan ia mengembalikan JSON.
       if (response.statusCode == 200 || response.statusCode == 201) {
         try {
            return jsonDecode(response.body);
@@ -267,62 +269,40 @@ class ApiService {
     }
   }
 
-  // UPLOAD BUKTI PEMBAYARAN RESERVASI (Multipart)
   Future<Map<String, dynamic>> uploadTablePayment(String bookingCode, Map<String, dynamic> data, File imageFile) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token') ?? '';
       
-      // Menggunakan MultipartRequest karena ada upload file gambar
       var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/reservations/$bookingCode/payment'));
       request.headers['Authorization'] = 'Bearer $token';
       request.headers['Accept'] = 'application/json';
       
-      // Masukkan field teks (bank_from, account_name, transaction_id)
       data.forEach((key, value) => request.fields[key] = value.toString());
-      
-      // Masukkan file gambar (Key 'payment_proof' disesuaikan dengan PaymentController Anda)
       request.files.add(await http.MultipartFile.fromPath('payment_proof', imageFile.path));
       
       var response = await request.send();
       final responseBody = await response.stream.bytesToString();
 
-      print("Upload Status: ${response.statusCode}");
-      print("Upload Response: $responseBody");
-      
-      // Jika status 302 (Found/Redirect) atau 200 (OK), kita anggap upload berhasil
       if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 302) {
         final json = jsonDecode(responseBody);
-        
-        // Asumsi API Laravel Anda akan mengembalikan JSON seperti ini jika sukses:
-        // { "success": true, "wa_url": "https://wa.me/..." }
-        
-        // Kita juga tambahkan fallback sederhana jika Laravel gagal mengirim wa_url
-        String waUrl = json['wa_url'] ?? "https://wa.me/6285272997806?text=Halo%20Caldera,%20saya%20telah%20mengupload%20bukti%20pembayaran%20untuk%20kode%20booking%20$bookingCode.";
-
-        return {
-          'success': true, 
-          'wa_url': waUrl
-        };
+        String waUrl = json['wa_url'] ?? "https://wa.me/6285272997806";
+        return {'success': true, 'wa_url': waUrl};
       }
       
-      // Jika terjadi error dari server (misal validasi gagal)
       try {
         final errorJson = jsonDecode(responseBody);
         return {'success': false, 'message': errorJson['message'] ?? 'Upload gagal'};
       } catch (_) {
         return {'success': false, 'message': 'Terjadi kesalahan pada server (Status: ${response.statusCode})'};
       }
-
     } catch (e) {
-      print("Error Upload: $e");
       return {'success': false, 'message': 'Network Error: $e'};
     }
   }
 
-  // MEMBATALKAN RESERVASI
-      Future<bool> cancelReservation(String bookingCode, {String reason = "Dibatalkan oleh user"}) async {
-        try {
+  Future<bool> cancelReservation(String bookingCode, {String reason = "Dibatalkan oleh user"}) async {
+    try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token') ?? '';
       
@@ -336,15 +316,12 @@ class ApiService {
          body: jsonEncode({'reason': reason}), 
       );
       
-      // Mengembalikan true jika sukses (bisa 200 atau 302 jika Laravel redirect)
       return response.statusCode == 200 || response.statusCode == 302;
     } catch (e) {
-      print("Error Cancel Reservation: $e");
       return false;
     }
   }
 
-  // GET RESERVATIONS
   Future<List<dynamic>> getReservations() async {
     try {
       final response = await http.get(Uri.parse('$baseUrl/reservations'), headers: await _getHeaders());
@@ -355,7 +332,6 @@ class ApiService {
     }
   }
   
-  // UPLOAD BUKTI PEMBAYARAN TIKET KOLAM
   Future<Map<String, dynamic>> uploadTicketPayment(String ticketCode, Map<String, dynamic> data, File imageFile) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -379,7 +355,6 @@ class ApiService {
     }
   }
 
-  // BELI TIKET KOLAM
   Future<Map<String, dynamic>> buyTicket(Map<String, dynamic> data) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -398,10 +373,9 @@ class ApiService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         return jsonDecode(response.body);
       } else {
-        // Jika server menolak (misal validasi gagal atau tiket habis)
         try {
           final errorData = jsonDecode(response.body);
-          return {'success': false, 'message': errorData['message'] ?? 'Gagal memesan tiket (Error ${response.statusCode})'};
+          return {'success': false, 'message': errorData['message'] ?? 'Gagal memesan tiket'};
         } catch (_) {
           return {'success': false, 'message': 'Server Error: ${response.statusCode}'};
         }
@@ -411,7 +385,6 @@ class ApiService {
     }
   }
 
-  // GET TICKETS
   Future<List<dynamic>> getTickets() async {
     try {
       final response = await http.get(Uri.parse('$baseUrl/tickets'), headers: await _getHeaders());
@@ -422,7 +395,6 @@ class ApiService {
     }
   }
   
-  // GET PROMOS
   Future<List<dynamic>> getPromos() async {
     try {
       final response = await http.get(Uri.parse('$baseUrl/promos'), headers: await _getHeaders());
@@ -433,7 +405,6 @@ class ApiService {
     }
   }
   
-  // GET GALLERY
   Future<List<dynamic>> getGallery() async {
     try {
       final response = await http.get(Uri.parse('$baseUrl/gallery'), headers: await _getHeaders());
@@ -444,7 +415,6 @@ class ApiService {
     }
   }
   
-  // SUBMIT TESTIMONIAL
   Future<Map<String, dynamic>> submitTestimonial(Map<String, dynamic> data) async {
     try {
       final response = await http.post(Uri.parse('$baseUrl/testimonials'), body: jsonEncode(data), headers: await _getHeaders());
@@ -454,7 +424,6 @@ class ApiService {
     }
   }
   
-  // GET TESTIMONIALS
   Future<List<dynamic>> getTestimonials() async {
     try {
       final response = await http.get(Uri.parse('$baseUrl/testimonials'), headers: await _getHeaders());
@@ -465,7 +434,6 @@ class ApiService {
     }
   }
   
-  // GET POOL INFO
   Future<Map<String, dynamic>> getPoolInfo() async {
     try {
       final response = await http.get(Uri.parse('$baseUrl/pool/info'), headers: await _getHeaders());
@@ -475,7 +443,6 @@ class ApiService {
     }
   }
   
-  // CHECK TABLE AVAILABILITY
   Future<Map<String, dynamic>> checkTableAvailability({required String date, required String time, required int guests}) async {
     try {
       final response = await http.post(
@@ -489,33 +456,20 @@ class ApiService {
     }
   }
 
-  // ==========================================
-  // NOTIFICATIONS (USER & ADMIN)
-  // ==========================================
-  
-  // Karena NotificationController Anda me-return JSON dari fungsi getLatest()
   Future<Map<String, dynamic>> getUserNotifications() async {
-  try {
-    final response = await http.get(
-      Uri.parse('$baseUrl/notifications'),
-      headers: await _getHeaders(),
-    );
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/notifications'),
+        headers: await _getHeaders(),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+      return {'notifications': []};
+    } catch (e) {
+      return {'notifications': []};
     }
-
-    return {
-      'notifications': [],
-    };
-  } catch (e) {
-    print("Notification Error: $e");
-
-    return {
-      'notifications': [],
-    };
   }
-}
 
   Future<bool> markAllNotificationsAsRead() async {
     try {
@@ -523,13 +477,12 @@ class ApiService {
         Uri.parse('$baseUrl/notifications/mark-all-read'), 
         headers: await _getHeaders()
       );
-      return response.statusCode == 200 || response.statusCode == 302; // Kadang laravel mereturn 302 redirect
+      return response.statusCode == 200 || response.statusCode == 302;
     } catch (e) {
       return false;
     }
   }
 
-  // TANDAI SATU NOTIFIKASI DIBACA
   Future<bool> markNotificationAsRead(String id) async {
     try {
       final response = await http.post(
@@ -542,25 +495,18 @@ class ApiService {
     }
   }
 
-  // ==========================================
-  // FIREBASE FCM TOKEN
-  // ==========================================
   Future<void> sendFcmTokenToServer(String token) async {
     try {
       await http.post(
-        Uri.parse('$baseUrl/update-fcm-token'), // Nanti kita buat API ini di Laravel
+        Uri.parse('$baseUrl/update-fcm-token'), 
         body: jsonEncode({'fcm_token': token}),
         headers: await _getHeaders(),
       );
-      print("Berhasil mengirim FCM Token ke Laravel");
     } catch (e) {
       print("Gagal mengirim FCM Token: $e");
     }
   }
 
-//Bagian Admin
-
-  // ADMIN DASHBOARD
   Future<Map<String, dynamic>> getAdminDashboard() async {
     try {
       final response = await http.get(Uri.parse('$baseUrl/admin/dashboard'), headers: await _getHeaders());
@@ -573,7 +519,6 @@ class ApiService {
     }
   }
 
-  // CRUD MENU
   Future<bool> createMenu(Map<String, dynamic> data, {File? imageFile}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -606,27 +551,22 @@ class ApiService {
     } catch (e) { return false; }
   }
 
-  // Tambah Foto Baru
-    Future<bool> createGallery(Map<String, dynamic> data, File imageFile) async {
+  Future<bool> createGallery(Map<String, dynamic> data, File imageFile) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/gallery'));
       request.headers['Authorization'] = 'Bearer ${prefs.getString('token')}';
       
       data.forEach((key, value) => request.fields[key] = value.toString());
-      
-      // GANTI 'file_path' MENJADI 'image' agar sesuai standar form Laravel
       request.files.add(await http.MultipartFile.fromPath('image', imageFile.path));
       
       var response = await request.send();
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) { 
-      print("Error Upload Gallery: $e");
       return false; 
     }
   }
 
-  // Hapus Foto
   Future<bool> deleteGallery(int id) async {
     try {
       final response = await http.delete(Uri.parse('$baseUrl/gallery/$id'), headers: await _getHeaders());
@@ -634,27 +574,26 @@ class ApiService {
     } catch (e) { return false; }
   }
 
-  // Fungsi Export
   Future<Uint8List?> downloadExportedFile(String url) async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final response = await http.get(
-      Uri.parse(url),
-      headers: {'Authorization': 'Bearer ${prefs.getString('token')}'},
-    );
-    if (response.statusCode == 200) {
-      return response.bodyBytes;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Authorization': 'Bearer ${prefs.getString('token')}'},
+      );
+      if (response.statusCode == 200) {
+        return response.bodyBytes;
+      }
+    } catch (e) {
+      print("Error Download: $e");
     }
-  } catch (e) {
-    print("Error Download: $e");
+    return null;
   }
-  return null;
-  }
+  
   String getExportReservationsUrl() {
-  return '$baseUrl/admin/reservations/export';
+    return '$baseUrl/admin/reservations/export';
   }
 
-   // DELETE TESTIMONIAL
   Future<bool> deleteTestimonial(int id) async {
     try {
       final response = await http.delete(Uri.parse('$baseUrl/testimonials/$id'), headers: await _getHeaders());
@@ -664,8 +603,7 @@ class ApiService {
     }
   }
 
-  //Facility
-    Future<Map<String, dynamic>> getFacilities() async {
+  Future<Map<String, dynamic>> getFacilities() async {
     try {
       final response = await http.get(Uri.parse('$baseUrl/pool/info'), headers: await _getHeaders());
       if (response.statusCode == 200) {
