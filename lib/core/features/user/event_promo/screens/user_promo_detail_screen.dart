@@ -525,10 +525,13 @@ class _UserPromoDetailScreenState extends State<UserPromoDetailScreen> with Widg
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       const Icon(Icons.calendar_today, size: 14, color: Colors.orange),
                                       const SizedBox(width: 6),
-                                      Text("Periode Promo", style: GoogleFonts.sora(color: Colors.orange.shade900, fontSize: 11, fontWeight: FontWeight.bold)),
+                                      Expanded(
+                                        child: Text("Periode Promo", style: GoogleFonts.sora(color: Colors.orange.shade900, fontSize: 11, fontWeight: FontWeight.bold)),
+                                      ),
                                     ],
                                   ),
                                   const SizedBox(height: 8),
@@ -550,10 +553,13 @@ class _UserPromoDetailScreenState extends State<UserPromoDetailScreen> with Widg
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Icon(Icons.assignment, size: 14, color: Colors.grey.shade700),
                                       const SizedBox(width: 6),
-                                      Text("Syarat & Ketentuan", style: GoogleFonts.sora(color: Colors.black87, fontSize: 11, fontWeight: FontWeight.bold)),
+                                      Expanded(
+                                          child: Text("Syarat & Ketentuan", style: GoogleFonts.sora(color: Colors.black87, fontSize: 11, fontWeight: FontWeight.bold)),
+                                      ),
                                     ],
                                   ),
                                   const SizedBox(height: 8),
