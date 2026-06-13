@@ -4,7 +4,6 @@ import '../../../services/api_service.dart';
 import 'register_screen.dart';
 import 'otp_verification_screen.dart'; // Pastikan path import OTP screen ini sudah benar
 import '../../user/main_user_screen.dart';
-import '../../admin/main_admin_screen.dart';
 import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -57,41 +56,33 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordController.text.trim(),
       );
       
+      // 👇 Blokir admin
+      final user = response['user'];
+      if (user != null && (user['role'] == 'admin' || user['role'] == 'staff')) {
+        await _apiService.logout(); // Hapus memori yang terlanjur tersimpan
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Akses Ditolak: Admin hanya dapat login melalui Website.', style: TextStyle(color: Colors.white)),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+        return; // Hentikan proses secara total!
+      }
+
       // SKENARIO 1: Login sukses & Sudah OTP
       if (response['success'] == true) {
-        final user = response['user'];
-        final role = user['role'];
-        
-        // --- BLOKIR AKSES ADMIN DI MOBILE ---
-        if (role == 'admin' || role == 'staff') {
-          // 1. Hapus token yang terlanjur tersimpan di ApiService
-          await _apiService.logout(); 
-
-          // 2. Munculkan pesan penolakan
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Akses Ditolak: Admin hanya dapat login melalui Website.'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-          return; // Hentikan proses agar tidak pindah halaman
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MainUserScreen()),
+          );
         }
-
-        // --- JIKA YANG LOGIN ADALAH CUSTOMER / USER BIASA ---
+      }
         
-        // Simpan remember me jika dicentang (Opsional)
-        if (_rememberMe) {
-          // Token sudah otomatis tersimpan di dalam fungsi login di ApiService
-        }
-        
-        // Arahkan langsung ke halaman User
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainUserScreen()),
-        );
-      } 
       // SKENARIO 2: Password benar, tapi BELUM verifikasi OTP
       else if (response['needs_verification'] == true) {
         // Tampilkan pesan/notifikasi kecil ke user

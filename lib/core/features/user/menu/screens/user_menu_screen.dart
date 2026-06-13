@@ -11,7 +11,8 @@ class UserMenuScreen extends StatefulWidget {
   State<UserMenuScreen> createState() => _UserMenuScreenState();
 }
 
-class _UserMenuScreenState extends State<UserMenuScreen> {
+// 1. TAMBAHKAN 'with WidgetsBindingObserver' DI SINI
+class _UserMenuScreenState extends State<UserMenuScreen> with WidgetsBindingObserver{
   final ApiService _apiService = ApiService();
   
   List<dynamic> menuItems = [];
@@ -28,7 +29,26 @@ class _UserMenuScreenState extends State<UserMenuScreen> {
   @override
   void initState() {
     super.initState();
+    // 2. DAFTARKAN OBSERVER
+    WidgetsBinding.instance.addObserver(this);
     _fetchMenuFromApi();
+  }
+
+  @override
+  void dispose() {
+    // 3. CABUT OBSERVER
+    WidgetsBinding.instance.removeObserver(this);
+    _localSearchController.dispose();
+    super.dispose();
+  }
+
+  // 👇 4. FUNGSI SAKTI AUTO-REFRESH 👇
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      print("Aplikasi dibuka kembali! Auto-refresh Menu...");
+      _fetchMenuFromApi();
+    }
   }
 
   // FUNGSI MENGAMBIL DATA DARI WEB

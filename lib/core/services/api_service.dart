@@ -57,7 +57,8 @@ class ApiService {
           return {
             'success': false, 
             'needs_verification': true, 
-            'message': responseData['message']
+            'message': responseData['message'],
+            'user': responseData['data']['user']
           };
         }
       } 

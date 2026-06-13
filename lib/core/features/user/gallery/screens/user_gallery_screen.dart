@@ -18,7 +18,8 @@ class UserGalleryScreen extends StatefulWidget {
   State<UserGalleryScreen> createState() => _UserGalleryScreenState();
 }
 
-class _UserGalleryScreenState extends State<UserGalleryScreen> {
+// 1. TAMBAHKAN 'with WidgetsBindingObserver' DI SINI
+class _UserGalleryScreenState extends State<UserGalleryScreen> with WidgetsBindingObserver {
   final ApiService _apiService = ApiService();
   
   List<dynamic> galleryImages = [];
@@ -39,8 +40,27 @@ class _UserGalleryScreenState extends State<UserGalleryScreen> {
     super.initState();
     // SETUP BAHASA INDONESIA UNTUK TIMEAGO
     timeago.setLocaleMessages('id', IdMessages());
+    // 2. DAFTARKAN OBSERVER SAAT HALAMAN DIBUKA
+    WidgetsBinding.instance.addObserver(this); 
     _fetchGallery();
     _fetchNotifications();
+  }
+
+  @override
+  void dispose() {
+    // 3. CABUT OBSERVER SAAT HALAMAN DITUTUP
+    WidgetsBinding.instance.removeObserver(this); 
+    super.dispose();
+  }
+
+  // 👇 4. INI ADALAH FUNGSI SAKTINYA (Deteksi aplikasi dibuka kembali) 👇
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Jika aplikasi kembali dibuka dari background, otomatis ambil data terbaru!
+      print("Aplikasi dibuka kembali! Auto-refresh Beranda...");
+      _fetchGallery();
+    }
   }
 
   // ==========================================

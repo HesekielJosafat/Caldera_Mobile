@@ -64,6 +64,16 @@ class _MainUserScreenState extends State<MainUserScreen> {
     if (userStr != null) {
       final userData = jsonDecode(userStr);
 
+      // Jika admin lempar ke login
+      if (userData['role'] == 'admin' || userData['role'] == 'staff') {
+        await _apiService.logout();
+        if (mounted) {
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+        }
+        return;
+      }
+
+
       if (userData['otp_verified'] == false || userData['otp_verified'] == 'false' || userData['otp_verified'] == null) {
         if (mounted) {
           // Tampilkan pesan error

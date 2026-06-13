@@ -1,35 +1,95 @@
+import 'dart:async'; 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:caldera_app/core/services/api_service.dart';
- 
+import 'package:caldera_app/core/utils/notification_service.dart'; 
+import 'package:firebase_messaging/firebase_messaging.dart'; 
+import 'package:intl/intl.dart'; // 👈 Wajib ada untuk format Rupiah (Rp)
+
 import '../../../../widgets/custom_bottom_nav.dart';
 import '../../notification/screens/user_notification_screen.dart';
 import '../../main_user_screen.dart';
- 
+
 import '../../menu/screens/user_menu_screen.dart';
 import '../../reservation/screens/user_reservation_screen.dart';
 import '../../pool/screens/user_facility_screen.dart';
- 
+
+// PACKAGE TIMEAGO UNTUK FORMAT WAKTU NOTIFIKASI
+import 'package:timeago/timeago.dart' as timeago;
+import 'package:timeago/src/messages/id_messages.dart';
+
 class UserPromoDetailScreen extends StatefulWidget {
   final Map<String, dynamic> promo;
- 
+
   const UserPromoDetailScreen({Key? key, required this.promo}) : super(key: key);
- 
+
   @override
   State<UserPromoDetailScreen> createState() => _UserPromoDetailScreenState();
 }
- 
-class _UserPromoDetailScreenState extends State<UserPromoDetailScreen> {
+
+class _UserPromoDetailScreenState extends State<UserPromoDetailScreen> with WidgetsBindingObserver {
   final ApiService _apiService = ApiService();
   int _unreadCount = 0;
   List<dynamic> _notifications = [];
- 
+  
+  Map<String, dynamic> _promoData = {}; 
+  bool _isLoading = false;
+
+  StreamSubscription<RemoteMessage>? _notifSubscription;
+
   @override
   void initState() {
     super.initState();
+    _promoData = Map.from(widget.promo);
+
+    timeago.setLocaleMessages('id', IdMessages());
+    WidgetsBinding.instance.addObserver(this); 
+
     _fetchNotifications();
+
+    _notifSubscription = NotificationService.onMessageStream.stream.listen((message) {
+      _refreshPromoDetail();
+      _fetchNotifications();
+    });
   }
- 
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this); 
+    _notifSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshPromoDetail();
+      _fetchNotifications();
+    }
+  }
+
+  Future<void> _refreshPromoDetail() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      String slug = _promoData['slug'] ?? '';
+      if (slug.isEmpty) return;
+
+      final promos = await _apiService.getPromos();
+      final updatedPromo = promos.firstWhere((p) => p['slug'] == slug, orElse: () => null);
+
+      if (updatedPromo != null && mounted) {
+        setState(() {
+          _promoData = updatedPromo;
+        });
+      }
+    } catch (e) {
+      print("Gagal refresh detail promo: $e");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   Future<void> _fetchNotifications() async {
     try {
       final data = await _apiService.getUserNotifications();
@@ -45,31 +105,53 @@ class _UserPromoDetailScreenState extends State<UserPromoDetailScreen> {
       debugPrint("Error fetching notifications: $e");
     }
   }
- 
+
   Future<void> _markAllAsRead() async {
+    if (_unreadCount == 0) return;
+    
     Navigator.of(context).pop();
+    
     setState(() {
       _unreadCount = 0;
       for (var notif in _notifications) {
         notif['read_at'] = 'read';
       }
     });
+    
     await _apiService.markAllNotificationsAsRead();
     await _fetchNotifications();
   }
- 
+
+  String _formatTime(String? createdAt) {
+    if (createdAt == null || createdAt.isEmpty) return '-';
+    try {
+      String formattedString = createdAt.replaceAll(' ', 'T');
+      if (!formattedString.endsWith('Z')) {
+        formattedString = formattedString + 'Z';
+      }
+      final dateTime = DateTime.parse(formattedString).toLocal();
+      return timeago.format(dateTime, locale: 'id');
+    } catch (e) {
+      return createdAt;
+    }
+  }
+
   IconData _getNotificationIcon(String? title) {
     if (title == null) return Icons.notifications;
-    final lower = title.toLowerCase();
-    if (lower.contains('tiket') || lower.contains('kolam')) return Icons.confirmation_num;
-    if (lower.contains('reservasi') || lower.contains('meja')) return Icons.event_available;
+    final lowerTitle = title.toLowerCase();
+    
+    if (lowerTitle.contains('tiket') || lowerTitle.contains('kolam')) {
+      return Icons.confirmation_num;
+    } else if (lowerTitle.contains('reservasi') || lowerTitle.contains('meja')) {
+      return Icons.event_available;
+    }
     return Icons.notifications;
   }
- 
+
   void _showNotificationPopup() async {
     await _fetchNotifications();
     if (!mounted) return;
- 
+
     showDialog(
       context: context,
       barrierColor: Colors.transparent,
@@ -104,7 +186,6 @@ class _UserPromoDetailScreenState extends State<UserPromoDetailScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // HEADER POPUP
                           Padding(
                             padding: const EdgeInsets.all(16),
                             child: Row(
@@ -132,8 +213,6 @@ class _UserPromoDetailScreenState extends State<UserPromoDetailScreen> {
                             ),
                           ),
                           const Divider(height: 1, color: Colors.black12),
- 
-                          // ISI NOTIFIKASI
                           Flexible(
                             child: _notifications.isEmpty
                                 ? Padding(
@@ -193,6 +272,10 @@ class _UserPromoDetailScreenState extends State<UserPromoDetailScreen> {
                                                       fontSize: 10, color: Colors.black87),
                                                   maxLines: 2,
                                                   overflow: TextOverflow.ellipsis),
+                                              const SizedBox(height: 6),
+                                              Text(_formatTime(notif['created_at']),
+                                                  style: GoogleFonts.sora(
+                                                      fontSize: 9, color: Colors.grey)),
                                             ],
                                           ),
                                           trailing: isUnread
@@ -229,8 +312,6 @@ class _UserPromoDetailScreenState extends State<UserPromoDetailScreen> {
                                     },
                                   ),
                           ),
- 
-                          // FOOTER — LIHAT SEMUA
                           const Divider(height: 1, color: Colors.black12),
                           InkWell(
                             onTap: () {
@@ -266,15 +347,16 @@ class _UserPromoDetailScreenState extends State<UserPromoDetailScreen> {
       },
     );
   }
- 
+
   @override
   Widget build(BuildContext context) {
     const Color primaryNavy = Color(0xFF14334C);
     const Color activeGold = Color(0xFFD4AF37);
- 
-    final promo = widget.promo;
- 
-    // Format diskon dengan % atau Rp sesuai discount_type
+    final formatCurrency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+
+    final promo = _promoData;
+
+    // Format diskon
     String discountText;
     if (promo['discount_value'] != null) {
       final val = promo['discount_value'].toString();
@@ -287,15 +369,37 @@ class _UserPromoDetailScreenState extends State<UserPromoDetailScreen> {
     } else {
       discountText = "Special Price";
     }
- 
+
     String promoType = (promo['promo_type'] ?? 'Promo').toString().toLowerCase();
- 
+
+    // 👇 LOGIKA SYARAT & KETENTUAN DINAMIS DARI DATABASE 👇
+    List<String> termsList = [];
+    
+    // 1. Cek Minimal Pembelian
+    if (promo['min_purchase'] != null && double.tryParse(promo['min_purchase'].toString()) != null && double.parse(promo['min_purchase'].toString()) > 0) {
+      termsList.add("Minimal transaksi ${formatCurrency.format(double.parse(promo['min_purchase'].toString()))}");
+    } else {
+      termsList.add("Tanpa minimal transaksi");
+    }
+
+    // 2. Cek Maksimal Diskon (Hanya untuk diskon persentase)
+    if (promo['discount_type'] == 'percentage' && promo['max_discount'] != null && double.tryParse(promo['max_discount'].toString()) != null && double.parse(promo['max_discount'].toString()) > 0) {
+      termsList.add("Maksimal potongan diskon ${formatCurrency.format(double.parse(promo['max_discount'].toString()))}");
+    }
+
+    // 3. Cek Kuota (Maksimal Penggunaan)
+    if (promo['max_usage'] != null && int.tryParse(promo['max_usage'].toString()) != null && int.parse(promo['max_usage'].toString()) > 0) {
+      termsList.add("Kuota terbatas untuk ${promo['max_usage']} penggunaan pertama");
+    }
+
+    // Tambahan aturan default
+    termsList.add("Promo tidak dapat digabung dengan penawaran lain");
+    // 👆 SAMPAI SINI 👆
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
- 
-      // APP HEADER
       appBar: AppBar(
-        automaticallyImplyLeading: false,
+        automaticallyImplyLeading: false, // Disetel false karena kita pakai custom back button di bawah
         backgroundColor: primaryNavy,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -334,111 +438,180 @@ class _UserPromoDetailScreenState extends State<UserPromoDetailScreen> {
           const SizedBox(width: 16),
         ],
       ),
- 
-      // BODY
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 1. BADGE TIPE
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: Colors.red.shade600, borderRadius: BorderRadius.circular(4)),
-                  child: Text(promoType.toUpperCase(),
-                      style: GoogleFonts.sora(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+
+      body: _isLoading 
+        ? const Center(child: CircularProgressIndicator(color: primaryNavy))
+        : RefreshIndicator(
+            color: activeGold,
+            onRefresh: _refreshPromoDetail, 
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(), 
+              padding: const EdgeInsets.all(24),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
                 ),
-                const SizedBox(height: 16),
- 
-                // 2. JUDUL
-                Text(promo['title'] ?? '',
-                    style: GoogleFonts.sora(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87)),
-                const SizedBox(height: 12),
- 
-                // 3. DISKON
-                Text(discountText,
-                    style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue.shade600)),
-                const SizedBox(height: 16),
- 
-                // 4. DESKRIPSI
-                Text(promo['description'] ?? '',
-                    style: GoogleFonts.sora(fontSize: 14, color: Colors.grey.shade700, height: 1.5)),
-                const SizedBox(height: 24),
- 
-                // 5. KODE PROMO
-                if (promo['promo_code'] != null)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(color: Colors.cyan.shade50, borderRadius: BorderRadius.circular(8)),
-                    child: RichText(
-                      text: TextSpan(
-                        style: GoogleFonts.sora(color: Colors.black87, fontSize: 14),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 1. BADGE TIPE (Kotak Merah Menu/Ticket)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(color: Colors.red.shade600, borderRadius: BorderRadius.circular(4)),
+                        child: Text(promoType.toUpperCase(),
+                            style: GoogleFonts.sora(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // 2. JUDUL
+                      Text(promo['title'] ?? '',
+                          style: GoogleFonts.sora(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87)),
+                      const SizedBox(height: 12),
+
+                      // 3. DISKON
+                      Text(discountText,
+                          style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue.shade600)),
+                      const SizedBox(height: 16),
+
+                      // 4. DESKRIPSI
+                      Text(promo['description'] ?? '',
+                          style: GoogleFonts.sora(fontSize: 14, color: Colors.grey.shade700, height: 1.5)),
+                      const SizedBox(height: 24),
+
+                      // 5. KODE PROMO & TANGGAL (Dibagi menjadi 2 Kolom seperti di Web)
+                      if (promo['promo_code'] != null)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(color: Colors.cyan.shade50, borderRadius: BorderRadius.circular(8)),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text("Promo Code:", style: GoogleFonts.sora(color: Colors.black87, fontSize: 12, fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 4),
+                                  Text(promo['promo_code'], style: GoogleFonts.sora(color: Colors.cyan.shade800, fontSize: 16, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                              // Tombol Copy 
+                              IconButton(
+                                icon: const Icon(Icons.copy, color: Colors.cyan),
+                                onPressed: () {
+                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kode berhasil disalin!'), duration: Duration(seconds: 1)));
+                                },
+                              )
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 16),
+
+                      // 6. SYARAT & KETENTUAN (DINAMIS DARI DATABASE)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const TextSpan(text: "Promo Code: ", style: TextStyle(fontWeight: FontWeight.bold)),
-                          TextSpan(text: promo['promo_code']),
+                          // Kolom Kiri: Periode Promo
+                          Expanded(
+                            flex: 1,
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(8)),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.calendar_today, size: 14, color: Colors.orange),
+                                      const SizedBox(width: 6),
+                                      Text("Periode Promo", style: GoogleFonts.sora(color: Colors.orange.shade900, fontSize: 11, fontWeight: FontWeight.bold)),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(promo['start_date']?.toString().split('T')[0] ?? '-', style: GoogleFonts.sora(color: Colors.black87, fontSize: 12, fontWeight: FontWeight.bold)),
+                                  Text("s/d", style: GoogleFonts.sora(color: Colors.black54, fontSize: 11)),
+                                  Text(promo['end_date']?.toString().split('T')[0] ?? '-', style: GoogleFonts.sora(color: Colors.black87, fontSize: 12, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Kolom Kanan: Syarat & Ketentuan Dinamis
+                          Expanded(
+                            flex: 1,
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(color: Colors.grey.shade50, border: Border.all(color: Colors.grey.shade200), borderRadius: BorderRadius.circular(8)),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(Icons.assignment, size: 14, color: Colors.grey.shade700),
+                                      const SizedBox(width: 6),
+                                      Text("Syarat & Ketentuan", style: GoogleFonts.sora(color: Colors.black87, fontSize: 11, fontWeight: FontWeight.bold)),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ...termsList.map((term) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 6),
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text("• ", style: GoogleFonts.sora(color: Colors.grey.shade600, fontSize: 12)),
+                                        Expanded(child: Text(term, style: GoogleFonts.sora(color: Colors.grey.shade700, fontSize: 10, height: 1.4))),
+                                      ],
+                                    ),
+                                  )).toList(),
+                                ],
+                              ),
+                            ),
+                          ),
                         ],
                       ),
-                    ),
-                  ),
-                const SizedBox(height: 12),
- 
-                // 6. TANGGAL VALID
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(8)),
-                  child: RichText(
-                    text: TextSpan(
-                      style: GoogleFonts.sora(color: Colors.black87, fontSize: 14),
-                      children: [
-                        const TextSpan(text: "Valid until: ", style: TextStyle(fontWeight: FontWeight.bold)),
-                        TextSpan(text: promo['end_date']?.toString().split('T')[0] ?? '-'),
-                      ],
-                    ),
+                      const SizedBox(height: 30),
+
+                      // 7. STATUS PROMO (JIKA SUDAH TIDAK AKTIF)
+                      if (promo['is_active'] == false || promo['is_active'] == 0)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          margin: const EdgeInsets.only(bottom: 24),
+                          decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(8)),
+                          child: Text(
+                            "⚠️ Promo ini sudah tidak aktif atau telah kadaluarsa.",
+                            style: GoogleFonts.sora(color: Colors.red.shade800, fontSize: 13, fontWeight: FontWeight.bold),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+
+                      // TOMBOL KEMBALI
+                      SizedBox(
+                        width: double.infinity,
+                        height: 45,
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.grey),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                          child: Text("Kembali", style: GoogleFonts.sora(color: Colors.black87, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 30),
- 
-                // 7. TOMBOL ORDER NOW
-                // SizedBox(
-                //   width: 150,
-                //   height: 45,
-                //   child: ElevatedButton(
-                //     style: ElevatedButton.styleFrom(
-                //       backgroundColor: Colors.blue.shade600,
-                //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                //     ),
-                //     onPressed: () {
-                //       if (promoType.contains('menu') || promoType.contains('food')) {
-                //         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const UserMenuScreen()));
-                //       } else if (promoType.contains('reservation')) {
-                //         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const UserReservationScreen()));
-                //       } else {
-                //         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const UserPoolScreen()));
-                //       }
-                //     },
-                //     child: Text("Order Now",
-                //         style: GoogleFonts.sora(color: Colors.white, fontWeight: FontWeight.bold)),
-                //   ),
-                // ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
- 
+
       // BOTTOM NAV BAR
       bottomNavigationBar: CustomBottomNavBar(
-        selectedIndex: 0,
+        selectedIndex: 0, 
         onItemTapped: (index) {
           if (index == 0) {
             Navigator.pop(context);

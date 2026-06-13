@@ -16,21 +16,40 @@ class UserPromoScreen extends StatefulWidget {
   State<UserPromoScreen> createState() => _UserPromoScreenState();
 }
 
-class _UserPromoScreenState extends State<UserPromoScreen> {
+
+// 1. TAMBAHKAN 'with WidgetsBindingObserver' DI SINI
+class _UserPromoScreenState extends State<UserPromoScreen> with WidgetsBindingObserver {
   final ApiService _apiService = ApiService();
   
   bool _isLoading = true;
   List<dynamic> _promos = [];
-  int _unreadCount = 0; // State untuk notifikasi
+  int _unreadCount = 0;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _fetchPromos();
-    _fetchNotifications(); // Panggil notifikasi saat halaman dibuka
+    _fetchNotifications();
   }
 
-  // Fungsi ambil promo
+   @override
+  void dispose() {
+    // 3. CABUT OBSERVER SAAT HALAMAN DITUTUP
+    WidgetsBinding.instance.removeObserver(this); 
+    super.dispose();
+  }
+
+  // 👇 4. INI ADALAH FUNGSI SAKTINYA (Deteksi aplikasi dibuka kembali) 👇
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Jika aplikasi kembali dibuka dari background, otomatis ambil data terbaru!
+      print("Aplikasi dibuka kembali! Auto-refresh Beranda...");
+      _fetchPromos();
+    }
+  }
+
   Future<void> _fetchPromos() async {
     setState(() => _isLoading = true);
     final data = await _apiService.getPromos();
@@ -42,7 +61,6 @@ class _UserPromoScreenState extends State<UserPromoScreen> {
     }
   }
 
-  // Fungsi ambil notifikasi (Sama persis seperti di Home & About)
   Future<void> _fetchNotifications() async {
     try {
       final data = await _apiService.getUserNotifications();
@@ -59,20 +77,31 @@ class _UserPromoScreenState extends State<UserPromoScreen> {
     }
   }
 
+  // 👇 FUNGSI BARU UNTUK MERAPIKAN FORMAT DISKON (Contoh: "40.00" -> "40% OFF") 👇
+  String _formatDiscount(dynamic discountValue) {
+    if (discountValue == null) return "Special Price";
+    
+    // Ubah jadi string
+    String strValue = discountValue.toString();
+    
+    // Jika ada desimal ".00", potong bagian desimalnya
+    if (strValue.endsWith(".00")) {
+      strValue = strValue.substring(0, strValue.length - 3);
+    }
+    
+    return "$strValue% OFF";
+  }
+
   @override
   Widget build(BuildContext context) {
     const Color primaryNavy = Color(0xFF14334C);
     const Color activeGold = Color(0xFFD4AF37);
     
-    // Filter hanya promo yang aktif
     final activePromos = _promos.where((p) => p['is_active'] == 1 || p['is_active'] == true).toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       
-      // =====================================
-      // 1. APP HEADER DENGAN NOTIFIKASI
-      // =====================================
       appBar: AppBar(
         automaticallyImplyLeading: false, 
         backgroundColor: primaryNavy,
@@ -125,9 +154,6 @@ class _UserPromoScreenState extends State<UserPromoScreen> {
         ],
       ),
 
-      // =====================================
-      // 2. KONTEN HALAMAN PROMO (DENGAN REFRESH)
-      // =====================================
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: primaryNavy))
           : RefreshIndicator(
@@ -137,11 +163,10 @@ class _UserPromoScreenState extends State<UserPromoScreen> {
                 await _fetchNotifications();
               },
               child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(), // Memaksa agar tetap bisa ditarik
+                physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
                 child: Column(
                   children: [
-                    // HEADER TEXT
                     Center(
                       child: Column(
                         children: [
@@ -153,7 +178,6 @@ class _UserPromoScreenState extends State<UserPromoScreen> {
                       ),
                     ),
 
-                    // LIST PROMO CARDS
                     activePromos.isEmpty
                         ? Padding(
                             padding: const EdgeInsets.only(top: 50),
@@ -165,11 +189,6 @@ class _UserPromoScreenState extends State<UserPromoScreen> {
                             itemCount: activePromos.length,
                             itemBuilder: (context, index) {
                               final promo = activePromos[index];
-                              
-                              String imgUrl = promo['banner_image'] ?? '';
-                              if (imgUrl.isNotEmpty && !imgUrl.startsWith('http')) {
-                                imgUrl = '${ApiService.baseUrl.replaceAll('/api', '')}/storage/$imgUrl';
-                              }
 
                               return GestureDetector(
                                 onTap: () {
@@ -181,25 +200,17 @@ class _UserPromoScreenState extends State<UserPromoScreen> {
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(16),
                                     boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+                                    border: Border.all(color: Colors.grey.shade200), // Tambahan border halus karena tidak ada gambar
                                   ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      // GAMBAR BANNER
-                                      ClipRRect(
-                                        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                                        child: imgUrl.isNotEmpty
-                                            ? Image.network(imgUrl, height: 180, width: double.infinity, fit: BoxFit.cover, errorBuilder: (c,e,s) => _buildImagePlaceholder())
-                                            : _buildImagePlaceholder(),
-                                      ),
-                                      
-                                      // KONTEN CARD
-                                      Padding(
-                                        padding: const EdgeInsets.all(20),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(20),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        // Baris Atas: Badge Tipe & Badge Promo Code
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
-                                            // Badge Tipe Promo
                                             Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                               decoration: BoxDecoration(color: Colors.red.shade600, borderRadius: BorderRadius.circular(4)),
@@ -208,34 +219,46 @@ class _UserPromoScreenState extends State<UserPromoScreen> {
                                                 style: GoogleFonts.sora(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)
                                               ),
                                             ),
-                                            const SizedBox(height: 12),
-                                            
-                                            // Judul
-                                            Text(promo['title'] ?? '', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
-                                            const SizedBox(height: 8),
-                                            
-                                            // Deskripsi Singkat
-                                            Text(promo['description'] ?? '', style: GoogleFonts.sora(fontSize: 12, color: Colors.grey.shade700), maxLines: 2, overflow: TextOverflow.ellipsis),
-                                            const SizedBox(height: 16),
-                                            
-                                            // Harga/Diskon & Kode
+                                            if (promo['promo_code'] != null)
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                                decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(4)),
+                                                child: Text(
+                                                  "Code: ${promo['promo_code']}", 
+                                                  style: GoogleFonts.sora(color: Colors.grey.shade700, fontSize: 10, fontWeight: FontWeight.bold)
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 16),
+                                        
+                                        // Judul
+                                        Text(promo['title'] ?? '', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+                                        const SizedBox(height: 8),
+                                        
+                                        // Deskripsi Singkat
+                                        Text(promo['description'] ?? '', style: GoogleFonts.sora(fontSize: 12, color: Colors.grey.shade700), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                        const SizedBox(height: 16),
+                                        
+                                        // Baris Bawah: Diskon & Tombol Lihat Detail
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              // 👇 MEMANGGIL FUNGSI FORMAT DISKON 👇
+                                              _formatDiscount(promo['discount_value']), 
+                                              style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue.shade600)
+                                            ),
                                             Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                               children: [
-                                                Text(
-                                                  promo['discount_value'] != null ? "Diskon ${promo['discount_value']}" : "Special Price", 
-                                                  style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.blue.shade600)
-                                                ),
-                                                Text(
-                                                  promo['promo_code'] != null ? "Code: ${promo['promo_code']}" : "", 
-                                                  style: GoogleFonts.sora(fontSize: 12, color: Colors.grey.shade600)
-                                                ),
+                                                Text("Lihat Detail", style: GoogleFonts.sora(fontSize: 11, fontWeight: FontWeight.bold, color: activeGold)),
+                                                const Icon(Icons.arrow_forward_ios, size: 12, color: activeGold),
                                               ],
                                             )
                                           ],
-                                        ),
-                                      )
-                                    ],
+                                        )
+                                      ],
+                                    ),
                                   ),
                                 ),
                               );
@@ -246,11 +269,8 @@ class _UserPromoScreenState extends State<UserPromoScreen> {
               ),
             ),
 
-      // =====================================
-      // 3. BOTTOM NAV BAR YANG SEMPURNA
-      // =====================================
       bottomNavigationBar: CustomBottomNavBar(
-        selectedIndex: 0, // Diberi highlight Home karena dibuka dari Home
+        selectedIndex: 0, 
         onItemTapped: (index) {
           if (index == 0) {
             Navigator.pop(context); 
@@ -265,13 +285,6 @@ class _UserPromoScreenState extends State<UserPromoScreen> {
           }
         },
       ),
-    );
-  }
-
-  Widget _buildImagePlaceholder() {
-    return Container(
-      height: 180, width: double.infinity, color: Colors.grey.shade200,
-      child: const Center(child: Icon(Icons.local_offer, size: 50, color: Colors.grey)),
     );
   }
 }

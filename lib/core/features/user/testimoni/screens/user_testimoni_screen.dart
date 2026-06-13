@@ -21,7 +21,8 @@ class UserTestimoniScreen extends StatefulWidget {
   State<UserTestimoniScreen> createState() => _UserTestimoniScreenState();
 }
 
-class _UserTestimoniScreenState extends State<UserTestimoniScreen> {
+// 1. TAMBAHKAN 'with WidgetsBindingObserver' DI SINI
+class _UserTestimoniScreenState extends State<UserTestimoniScreen> with WidgetsBindingObserver {
   final ApiService _apiService = ApiService();
   
   List<dynamic> allReviews = [];
@@ -41,8 +42,27 @@ class _UserTestimoniScreenState extends State<UserTestimoniScreen> {
   void initState() {
     super.initState();
     timeago.setLocaleMessages('id', IdMessages());
+     // 2. DAFTARKAN OBSERVER SAAT HALAMAN DIBUKA
+    WidgetsBinding.instance.addObserver(this); 
     _fetchTestimonials();
     _fetchNotifications();
+  }
+
+  @override
+  void dispose() {
+    // 3. CABUT OBSERVER SAAT HALAMAN DITUTUP
+    WidgetsBinding.instance.removeObserver(this); 
+    super.dispose();
+  }
+
+  // 👇 4. INI ADALAH FUNGSI SAKTINYA (Deteksi aplikasi dibuka kembali) 👇
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Jika aplikasi kembali dibuka dari background, otomatis ambil data terbaru!
+      print("Aplikasi dibuka kembali! Auto-refresh Beranda...");
+      _fetchTestimonials();
+    }
   }
 
   // ==========================================

@@ -24,8 +24,8 @@ class UserHomeScreen extends StatefulWidget {
   @override
   State<UserHomeScreen> createState() => _UserHomeScreenState();
 }
-
-class _UserHomeScreenState extends State<UserHomeScreen> {
+// 1. TAMBAHKAN 'with WidgetsBindingObserver' DI SINI
+class _UserHomeScreenState extends State<UserHomeScreen> with WidgetsBindingObserver {
   final ApiService _apiService = ApiService();
   final Color primaryNavy = const Color(0xFF14334C);
   final Color activeGold = const Color(0xFFD4AF37);
@@ -38,7 +38,26 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   @override
   void initState() {
     super.initState();
+     // 2. DAFTARKAN OBSERVER SAAT HALAMAN DIBUKA
+    WidgetsBinding.instance.addObserver(this); 
     _fetchAllData();
+  }
+
+  @override
+  void dispose() {
+    // 3. CABUT OBSERVER SAAT HALAMAN DITUTUP
+    WidgetsBinding.instance.removeObserver(this); 
+    super.dispose();
+  }
+
+  // 👇 4. INI ADALAH FUNGSI SAKTINYA (Deteksi aplikasi dibuka kembali) 👇
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Jika aplikasi kembali dibuka dari background, otomatis ambil data terbaru!
+      print("Aplikasi dibuka kembali! Auto-refresh Beranda...");
+      _fetchAllData();
+    }
   }
 
   Future<void> _fetchAllData() async {
@@ -58,6 +77,20 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  // 👇 FUNGSI BARU UNTUK MERAPIKAN FORMAT DISKON (Contoh: "40.00" -> "40% OFF") 👇
+  String _formatDiscount(dynamic discountValue) {
+    if (discountValue == null) return "Special Price";
+    
+    String strValue = discountValue.toString();
+    
+    // Potong bagian desimal ".00" jika ada
+    if (strValue.endsWith(".00")) {
+      strValue = strValue.substring(0, strValue.length - 3);
+    }
+    
+    return "$strValue% OFF";
   }
 
   @override
@@ -272,7 +305,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                     const SizedBox(height: 12),
                     Text(promo['title'] ?? '', style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.bold, color: primaryNavy), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 8),
-                    Text(promo['discount_value'] != null ? '${promo['discount_value']} OFF' : 'Special Price', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.bold, color: activeGold)),
+                    Text(_formatDiscount(promo['discount_value']), style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.bold, color: activeGold)),
                     const SizedBox(height: 8),
                     Text(promo['description'] ?? '', style: GoogleFonts.sora(fontSize: 11, color: Colors.grey), textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
                   ],
