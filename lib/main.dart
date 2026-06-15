@@ -7,6 +7,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'core/features/auth/screens/login_screen.dart'; 
 
 // Fungsi ini menangkap notifikasi saat aplikasi ditutup/di-minimize
+@pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
   print("Notifikasi masuk saat background: ${message.messageId}");

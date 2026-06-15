@@ -35,7 +35,7 @@ class NotificationService {
     }
 
     // 4. Setup Tampilan Notifikasi saat aplikasi sedang dibuka (Foreground)
-    const AndroidInitializationSettings androidInitSettings = AndroidInitializationSettings('ic_stat_notification');
+    const AndroidInitializationSettings androidInitSettings = AndroidInitializationSettings('@mipmap/launcher_icon');
     const InitializationSettings initSettings = InitializationSettings(android: androidInitSettings);
     await _localNotificationsPlugin.initialize(settings: initSettings);
 
@@ -54,7 +54,7 @@ class NotificationService {
       'Caldera Notifications', // Nama Channel di setting HP
       importance: Importance.max,
       priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
+      // icon: '@mipmap/ic_launcher',
     );
     const NotificationDetails platformDetails = NotificationDetails(android: androidDetails);
     

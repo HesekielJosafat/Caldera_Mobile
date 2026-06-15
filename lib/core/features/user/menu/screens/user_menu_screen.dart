@@ -11,14 +11,13 @@ class UserMenuScreen extends StatefulWidget {
   State<UserMenuScreen> createState() => _UserMenuScreenState();
 }
 
-// 1. TAMBAHKAN 'with WidgetsBindingObserver' DI SINI
-class _UserMenuScreenState extends State<UserMenuScreen> with WidgetsBindingObserver{
+class _UserMenuScreenState extends State<UserMenuScreen> with WidgetsBindingObserver {
   final ApiService _apiService = ApiService();
   
   List<dynamic> menuItems = [];
   bool isLoading = true;
 
-  // Filter Kategori (Web Style)
+  // Filter Kategori (Mobile Style)
   String selectedCategory = "All";
   final List<String> categories = ["All", "Makanan", "Minuman", "Dessert"];
 
@@ -29,29 +28,26 @@ class _UserMenuScreenState extends State<UserMenuScreen> with WidgetsBindingObse
   @override
   void initState() {
     super.initState();
-    // 2. DAFTARKAN OBSERVER
-    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addObserver(this); // Daftarkan Observer
     _fetchMenuFromApi();
   }
 
   @override
   void dispose() {
-    // 3. CABUT OBSERVER
-    WidgetsBinding.instance.removeObserver(this);
+    WidgetsBinding.instance.removeObserver(this); // Cabut Observer
     _localSearchController.dispose();
     super.dispose();
   }
 
-  // 👇 4. FUNGSI SAKTI AUTO-REFRESH 👇
+  // AUTO-REFRESH SAAT APP DIBUKA KEMBALI DARI BACKGROUND
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      print("Aplikasi dibuka kembali! Auto-refresh Menu...");
       _fetchMenuFromApi();
     }
   }
 
-  // FUNGSI MENGAMBIL DATA DARI WEB
+  // FUNGSI MENGAMBIL DATA DARI API
   Future<void> _fetchMenuFromApi() async {
     try {
       final List<dynamic> data = await _apiService.getMenus();
@@ -82,7 +78,8 @@ class _UserMenuScreenState extends State<UserMenuScreen> with WidgetsBindingObse
 
   @override
   Widget build(BuildContext context) {
-    const Color primaryNavy = Color(0xFF1B3B5A);
+    const Color primaryNavy = Color(0xFF14334C);
+    const Color activeGold = Color(0xFFD4AF37);
 
     // Menggabungkan search dari parent dan lokal
     String activeSearch = localSearchQuery.isNotEmpty ? localSearchQuery : widget.searchQuery;
@@ -101,291 +98,274 @@ class _UserMenuScreenState extends State<UserMenuScreen> with WidgetsBindingObse
 
     return Column(
       children: [
-        Expanded(
-          // BUNGKUS DENGAN REFRESH INDICATOR UNTUK PULL-TO-REFRESH DI HALAMAN MENU
-          child: RefreshIndicator(
-            color: primaryNavy,
-            onRefresh: _fetchMenuFromApi, // Pemicu ambil data baru
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(), // Memaksa agar tetap bisa ditarik ke bawah
-              child: Column(
-                children: [
-                  const SizedBox(height: 30),
-                  
-                  // 1. JUDUL & SUBJUDUL ALA WEB
-                  Text(
-                    "Our Menu",
-                    style: GoogleFonts.playfairDisplay(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: primaryNavy,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    width: 50,
-                    height: 3,
-                    color: const Color(0xFFC49A45),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "Discover our delicious selection of food and beverages",
-                    style: GoogleFonts.sora(
-                      fontSize: 14,
-                      color: Colors.grey.shade500,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 30),
-
-                  // 2. SEARCH BAR ALA WEB
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(30),
-                        border: Border.all(color: Colors.grey.shade200),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.02),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          )
-                        ]
-                      ),
-                      child: TextField(
-                        controller: _localSearchController,
-                        onChanged: (value) => setState(() => localSearchQuery = value),
-                        decoration: InputDecoration(
-                          hintText: "Search menu...",
-                          hintStyle: GoogleFonts.sora(color: Colors.grey.shade400, fontSize: 14),
-                          prefixIcon: Icon(Icons.search, color: Colors.grey.shade600),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 15),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // 3. TABS KATEGORI KAPSUL (WEB STYLE)
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: categories.map((category) {
-                        final isSelected = selectedCategory == category;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: GestureDetector(
-                            onTap: () => setState(() => selectedCategory = category),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: isSelected ? primaryNavy : Colors.white,
-                                borderRadius: BorderRadius.circular(30),
-                                border: Border.all(
-                                  color: isSelected ? primaryNavy : Colors.grey.shade300,
-                                ),
-                              ),
-                              child: Text(
-                                category,
-                                style: GoogleFonts.sora(
-                                  color: isSelected ? Colors.white : Colors.black87,
-                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-
-                  // 4. LIST KARTU MENU
-                  isLoading
-                      ? const Padding(
-                          padding: EdgeInsets.all(40),
-                          child: CircularProgressIndicator(color: primaryNavy),
-                        )
-                      : filteredMenu.isEmpty
-                          ? Padding(
-                              padding: const EdgeInsets.all(40),
-                              child: Text("Menu tidak ditemukan", style: GoogleFonts.sora(color: Colors.grey)),
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 24),
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: filteredMenu.length,
-                              itemBuilder: (context, index) {
-                                final item = filteredMenu[index];
-                                
-                                final String namaMenu = item['name'] ?? 'Nama Menu';
-                                final String hargaMenu = item['price']?.toString() ?? '0';
-                                
-                                // 👇 1. PERBAIKAN: MERAKIT PATH GAMBAR MENJADI URL UTUH DARI HOSTING 👇
-                                String imageUrl = item['image_url'] ?? item['image'] ?? '';
-                                if (imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
-                                  imageUrl = '${ApiService.baseUrl.replaceAll('/api', '')}/storage/$imageUrl';
-                                }
-
-                                final String descMenu = item['description'] ?? '';
-                                final bool isRecommended = item['is_recommended'] == 1 || item['is_recommended'] == true;
-
-                                return _buildWebStyleCard(
-                                  namaMenu: namaMenu,
-                                  hargaMenu: hargaMenu,
-                                  imageUrl: imageUrl, // Kirim URL utuh
-                                  descMenu: descMenu,
-                                  isRecommended: isRecommended,
-                                );
-                              },
-                            ),
-                  
-                  const SizedBox(height: 40),
-                ],
+        // ==========================================
+        // 1. MOBILE NATIVE SEARCH BAR
+        // ==========================================
+        Container(
+          color: Colors.white,
+          padding: const EdgeInsets.only(top: 20, left: 16, right: 16, bottom: 10),
+          child: Container(
+            height: 45,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: TextField(
+              controller: _localSearchController,
+              onChanged: (value) => setState(() => localSearchQuery = value),
+              style: GoogleFonts.sora(fontSize: 13),
+              decoration: InputDecoration(
+                hintText: "Cari menu favoritmu...",
+                hintStyle: GoogleFonts.sora(color: Colors.grey.shade500, fontSize: 13),
+                prefixIcon: Icon(Icons.search, color: Colors.grey.shade600, size: 20),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                // Tombol silang (clear) muncul jika ada teks
+                suffixIcon: localSearchQuery.isNotEmpty 
+                  ? IconButton(
+                      icon: Icon(Icons.clear, color: Colors.grey.shade600, size: 18),
+                      onPressed: () {
+                        _localSearchController.clear();
+                        setState(() => localSearchQuery = "");
+                      },
+                    )
+                  : null,
               ),
             ),
+          ),
+        ),
+
+        // ==========================================
+        // 2. MOBILE NATIVE CATEGORY CHIPS
+        // ==========================================
+        Container(
+          color: Colors.white,
+          padding: const EdgeInsets.only(bottom: 12),
+          child: SizedBox(
+            height: 35,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: categories.length,
+              itemBuilder: (context, index) {
+                final category = categories[index];
+                final isSelected = selectedCategory == category;
+                
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(
+                      category,
+                      style: GoogleFonts.sora(
+                        color: isSelected ? Colors.white : Colors.black87,
+                        fontSize: 12,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                    selected: isSelected,
+                    onSelected: (bool selected) {
+                      setState(() => selectedCategory = category);
+                    },
+                    selectedColor: primaryNavy,
+                    backgroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      side: BorderSide(
+                        color: isSelected ? primaryNavy : Colors.grey.shade300,
+                      ),
+                    ),
+                    showCheckmark: false, // Sembunyikan centang default
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        
+        // Sedikit bayangan di bawah header pencarian
+        Container(height: 1, color: Colors.grey.shade200),
+
+        // ==========================================
+        // 3. LIST MENU (CARD HORIZONTAL)
+        // ==========================================
+        Expanded(
+          child: RefreshIndicator(
+            color: activeGold,
+            onRefresh: _fetchMenuFromApi, 
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator(color: primaryNavy))
+                : filteredMenu.isEmpty
+                    ? SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: Container(
+                          height: MediaQuery.of(context).size.height * 0.5,
+                          alignment: Alignment.center,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.restaurant_menu, size: 60, color: Colors.grey.shade300),
+                              const SizedBox(height: 16),
+                              Text("Menu tidak ditemukan", style: GoogleFonts.sora(color: Colors.grey.shade500)),
+                            ],
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        itemCount: filteredMenu.length,
+                        itemBuilder: (context, index) {
+                          final item = filteredMenu[index];
+                          
+                          final String namaMenu = item['name'] ?? 'Nama Menu';
+                          final String hargaMenu = item['price']?.toString() ?? '0';
+                          final String descMenu = item['description'] ?? '';
+                          final bool isRecommended = item['is_recommended'] == 1 || item['is_recommended'] == true;
+
+                          // MERAKIT URL GAMBAR
+                          String imageUrl = item['image_url'] ?? item['image'] ?? '';
+                          if (imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
+                            imageUrl = '${ApiService.baseUrl.replaceAll('/api', '')}/storage/$imageUrl';
+                          }
+
+                          return _buildMobileCard(
+                            namaMenu: namaMenu,
+                            hargaMenu: hargaMenu,
+                            imageUrl: imageUrl,
+                            descMenu: descMenu,
+                            isRecommended: isRecommended,
+                          );
+                        },
+                      ),
           ),
         ),
       ],
     );
   }
 
-  // DESAIN KARTU MENU (Sama Persis Seperti Web)
-  Widget _buildWebStyleCard({
+  // ==========================================
+  // DESAIN KARTU MENU ALA G0FOOD/GRABFOOD
+  // ==========================================
+  Widget _buildMobileCard({
     required String namaMenu,
     required String hargaMenu,
     required String imageUrl,
     required String descMenu,
     required bool isRecommended,
   }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade100),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04), 
-            blurRadius: 15, 
-            offset: const Offset(0, 5)
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Gambar Menu
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            child: imageUrl.isNotEmpty && imageUrl.startsWith('http')
-                ? Image.network(
-                    imageUrl,
-                    height: 200,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (ctx, err, stack) => _fallbackImage(),
-                  )
-                : _fallbackImage(),
-          ),
-          
-          // Konten Teks
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        namaMenu,
-                        style: GoogleFonts.sora(
-                          fontWeight: FontWeight.bold, 
-                          fontSize: 18,
-                          color: const Color(0xFF1B3B5A)
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      "Rp ${formatCurrency(hargaMenu)}",
-                      style: GoogleFonts.sora(
-                        color: const Color(0xFFC49A45),
-                        fontWeight: FontWeight.bold, 
-                        fontSize: 16
-                      ),
-                    ),
-                  ],
-                ),
-                
-                const SizedBox(height: 12),
-                
-                if (descMenu.isNotEmpty)
-                  Text(
-                    descMenu,
-                    style: GoogleFonts.sora(
-                      color: Colors.grey.shade600, 
-                      fontSize: 14,
-                      height: 1.5,
-                    ),
-                  ),
-                
-                if (isRecommended) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.green.shade50,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.green.shade100)
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.star, color: Color(0xFFC49A45), size: 14),
-                        const SizedBox(width: 6),
-                        Text(
-                          "Recommended",
-                          style: GoogleFonts.sora(
-                            color: Colors.green.shade700,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ]
-              ],
+    const Color activeGold = Color(0xFFD4AF37);
+    const Color primaryNavy = Color(0xFF14334C);
+
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.1),
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 1. THUMBNAIL GAMBAR KIRI
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: imageUrl.isNotEmpty
+                  ? Image.network(
+                      imageUrl,
+                      width: 90,
+                      height: 90,
+                      fit: BoxFit.cover,
+                      errorBuilder: (ctx, err, stack) => _fallbackImage(),
+                    )
+                  : _fallbackImage(),
             ),
-          ),
-        ],
+            
+            const SizedBox(width: 16),
+            
+            // 2. KONTEN TEKS KANAN
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Judul Menu
+                  Text(
+                    namaMenu,
+                    style: GoogleFonts.sora(
+                      fontWeight: FontWeight.bold, 
+                      fontSize: 14,
+                      color: Colors.black87
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  
+                  // Deskripsi
+                  if (descMenu.isNotEmpty)
+                    Text(
+                      descMenu,
+                      style: GoogleFonts.sora(
+                        color: Colors.grey.shade600, 
+                        fontSize: 11,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  
+                  const SizedBox(height: 8),
+                  
+                  // Harga dan Badge Recommended
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Rp ${formatCurrency(hargaMenu)}",
+                        style: GoogleFonts.sora(
+                          color: primaryNavy,
+                          fontWeight: FontWeight.bold, 
+                          fontSize: 13
+                        ),
+                      ),
+                      
+                      if (isRecommended)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: activeGold.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: activeGold.withOpacity(0.5))
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.star, color: activeGold, size: 10),
+                              const SizedBox(width: 2),
+                              Text(
+                                "Recommended",
+                                style: GoogleFonts.sora(color: Colors.green.shade700, fontSize: 9, fontWeight: FontWeight.bold),
+                              )
+                            ],
+                          ),
+                        )
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _fallbackImage() {
     return Container(
-      height: 200,
-      width: double.infinity,
+      width: 90,
+      height: 90,
       color: Colors.grey.shade100,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.restaurant, color: Colors.grey.shade300, size: 50),
-          const SizedBox(height: 8),
-          Text("No Image Available", style: GoogleFonts.sora(color: Colors.grey.shade400, fontSize: 12))
-        ],
+      child: Center(
+        child: Icon(Icons.restaurant, color: Colors.grey.shade400, size: 30),
       ),
     );
   }

@@ -178,14 +178,13 @@ class _UserReservationScreenState extends State<UserReservationScreen> {
                         ),
                         const SizedBox(height: 30),
 
-                        _buildLabel("Full Name *", Icons.person, activeGold),
+                        _buildLabel("Full Name *", Icon(Icons.person, size: 14, color: activeGold)),
                         _buildTextField(_nameCtrl, "Enter your full name", TextInputType.name),
                         const SizedBox(height: 16),
 
                         _buildLabel(
                             "WhatsApp Number *",
-                            FontAwesomeIcons.whatsapp,
-                            const Color(0xFF25D366),
+                            const FaIcon(FontAwesomeIcons.whatsapp, color: Color(0xFF25D366), size: 14),
                           ),
                         _buildTextField(_phoneCtrl, "0812-3456-7890", TextInputType.phone),
                         Text("We'll send confirmation to this number", style: GoogleFonts.sora(color: Colors.grey.shade500, fontSize: 9)),
@@ -197,7 +196,7 @@ class _UserReservationScreenState extends State<UserReservationScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _buildLabel("Guests *", Icons.people, activeGold),
+                                  _buildLabel("Guests *", Icon(Icons.people, size: 14, color: activeGold)),
                                   _buildTextField(_guestsCtrl, "2", TextInputType.number),
                                 ],
                               ),
@@ -207,7 +206,7 @@ class _UserReservationScreenState extends State<UserReservationScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _buildLabel("Date *", Icons.calendar_today, activeGold),
+                                  _buildLabel("Date *", Icon(Icons.calendar_today, size: 14, color: activeGold)),
                                   InkWell(
                                     onTap: _pickDate,
                                     child: Container(
@@ -229,7 +228,7 @@ class _UserReservationScreenState extends State<UserReservationScreen> {
                         const SizedBox(height: 24),
 
                         // TIME SLOTS (Dinamis berubah sesuai hari yg dipilih)
-                        _buildLabel("Reservation Time *", Icons.access_time, activeGold),
+                        _buildLabel("Reservation Time *", Icon(Icons.access_time, size: 14, color: activeGold)),
                         _selectedDate == null 
                           ? Container(
                               width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 20), decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
@@ -285,7 +284,7 @@ class _UserReservationScreenState extends State<UserReservationScreen> {
                             ),
                         const SizedBox(height: 24),
 
-                        _buildLabel("Special Requests", Icons.comment, activeGold),
+                        _buildLabel("Special Requests", Icon(Icons.comment, size: 14, color: activeGold)),
                         TextField(
                           controller: _specialReqCtrl, maxLines: 3, style: GoogleFonts.sora(fontSize: 13),
                           decoration: InputDecoration(hintText: "Example: baby chair, non-smoking area...", hintStyle: GoogleFonts.sora(color: Colors.grey.shade400, fontSize: 13), border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)), contentPadding: const EdgeInsets.all(12)),
@@ -297,8 +296,9 @@ class _UserReservationScreenState extends State<UserReservationScreen> {
                           child: Row(
                             children: [
                               const FaIcon(
-                                FontAwesomeIcons.whatsapp, color: const Color(0xFF25D366), size: 18
+                                FontAwesomeIcons.whatsapp, color: Color(0xFF25D366), size: 18
                               ),
+                              const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -319,7 +319,7 @@ class _UserReservationScreenState extends State<UserReservationScreen> {
                             Expanded(
                               child: OutlinedButton(
                                 style: OutlinedButton.styleFrom(
-                                  side: BorderSide(color: primaryNavy), 
+                                  side: const BorderSide(color: primaryNavy), 
                                   padding: const EdgeInsets.symmetric(vertical: 14), 
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
                                 ), 
@@ -342,7 +342,7 @@ class _UserReservationScreenState extends State<UserReservationScreen> {
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
                                 ), 
                                 onPressed: _submitForm, 
-                                icon: const Icon(FontAwesomeIcons.whatsapp, color: Colors.white, size: 16), 
+                                icon: const FaIcon(FontAwesomeIcons.whatsapp, color: Colors.white, size: 16), 
                                 label: Text("Reserve", style: GoogleFonts.sora(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13))
                               )
                             ),
@@ -365,7 +365,7 @@ class _UserReservationScreenState extends State<UserReservationScreen> {
                       Expanded(
                         child: Column(
                           children: [
-                            Icon(Icons.restaurant, color: activeGold, size: 28), const SizedBox(height: 8),
+                            const Icon(Icons.restaurant, color: activeGold, size: 28), const SizedBox(height: 8),
                             Text("Restaurant Hours", style: GoogleFonts.sora(fontWeight: FontWeight.bold, color: primaryNavy, fontSize: 12)), const SizedBox(height: 4),
                             Text("Mon-Fri: 10:00 - 22:00\nSat-Sun: 09:00 - 23:00", style: GoogleFonts.sora(fontSize: 10, color: Colors.grey.shade600), textAlign: TextAlign.center),
                           ],
@@ -392,13 +392,13 @@ class _UserReservationScreenState extends State<UserReservationScreen> {
     );
   }
 
-  // Helper membuat Label
-  Widget _buildLabel(String text, IconData icon, Color iconColor) {
+  // Helper membuat Label (SUDAH DIPERBAIKI MENGGUNAKAN WIDGET)
+  Widget _buildLabel(String text, Widget iconWidget) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Row(
         children: [
-          Icon(icon, size: 14, color: iconColor),
+          iconWidget, // Langsung memanggil widget (Bisa Icon atau FaIcon)
           const SizedBox(width: 6),
           Text(text, style: GoogleFonts.sora(fontWeight: FontWeight.w600, fontSize: 12, color: const Color(0xFF14334C))),
         ],

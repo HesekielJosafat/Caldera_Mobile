@@ -25,7 +25,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
-  // 👇 STATE UNTUK KEKUATAN PASSWORD 👇
+  // STATE UNTUK KEKUATAN PASSWORD
   double _passwordStrength = 0.0;
   String _passwordStrengthText = '';
   Color _passwordStrengthColor = Colors.transparent;
@@ -44,7 +44,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  // 👇 FUNGSI UNTUK MENGECEK KEKUATAN PASSWORD REAL-TIME 👇
+  // FUNGSI UNTUK MENGECEK KEKUATAN PASSWORD REAL-TIME
   void _checkPasswordStrength(String password) {
     if (password.isEmpty) {
       setState(() {
@@ -122,7 +122,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _errorMessage = null;
     });
 
-    // 4. Siapkan payload data (phone dikirim hanya jika tidak kosong)
+    // 4. Siapkan payload data
     Map<String, dynamic> data = {
       'name': name,
       'email': email,
@@ -131,7 +131,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     };
 
     if (phone.isNotEmpty) {
-      data['phone'] = phone; // Nomor telepon sekarang resmi opsional!
+      data['phone'] = phone; // Nomor telepon opsional
     }
 
     final result = await _apiService.register(data);
@@ -250,18 +250,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           _buildTextField('Nomor WhatsApp (Opsional)', _phoneController, Icons.phone_outlined, type: TextInputType.phone),
                           const SizedBox(height: 16),
 
-                          // PASSWORD FIELD DGN DETEKSI REAL-TIME
+                          // 👇 PASSWORD FIELD YANG LEBIH BERSIH 👇
                           _buildPasswordField(
-                            'Password (Kapital, Angka, Simbol)', 
+                            'Password', 
                             _passwordController, 
                             _obscurePassword, 
                             () {
                               setState(() => _obscurePassword = !_obscurePassword);
                             },
-                            onChanged: _checkPasswordStrength, // 👈 Panggil fungsi deteksi kekuatan
+                            onChanged: _checkPasswordStrength, 
                           ),
                           
-                          // 👇 WIDGET INDIKATOR KEKUATAN PASSWORD 👇
+                          // TEKS SYARAT PASSWORD (Di bawah field)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0, left: 4.0),
+                            child: Text(
+                              '* Syarat: Min. 8 karakter, ada huruf kapital, angka & simbol.',
+                              style: GoogleFonts.sora(fontSize: 10, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+                            ),
+                          ),
+
+                          // WIDGET INDIKATOR KEKUATAN PASSWORD
                           if (_passwordController.text.isNotEmpty)
                             Padding(
                               padding: const EdgeInsets.only(top: 8.0, left: 4.0, right: 4.0),
@@ -349,7 +358,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // WIDGET HELPER PASSWORD FIELD (DIPERBARUI DGN onChanged)
+  // WIDGET HELPER PASSWORD FIELD
   Widget _buildPasswordField(String hint, TextEditingController controller, bool isObscured, VoidCallback toggleVis, {Function(String)? onChanged}) {
     return Container(
       decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(12)),
@@ -357,7 +366,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         controller: controller, 
         obscureText: isObscured, 
         style: GoogleFonts.sora(fontSize: 14),
-        onChanged: onChanged, // 👈 Fungsi dijalankan saat mengetik
+        onChanged: onChanged, 
         decoration: InputDecoration(
           hintText: hint, hintStyle: GoogleFonts.sora(color: Colors.grey.shade500),
           prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF14334C)), border: InputBorder.none, contentPadding: const EdgeInsets.symmetric(vertical: 16),

@@ -381,7 +381,7 @@ class _UserReservationWhatsappScreenState extends State<UserReservationWhatsappS
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF25D366), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
                     onPressed: () => _launchWhatsApp(context),
-                    icon: const Icon(FontAwesomeIcons.whatsapp, color: Colors.white),
+                    icon: const FaIcon(FontAwesomeIcons.whatsapp, color: Colors.white),
                     label: Text("Kirim ke WhatsApp Caldera", style: GoogleFonts.sora(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                   ),
                 ),
@@ -396,7 +396,7 @@ class _UserReservationWhatsappScreenState extends State<UserReservationWhatsappS
                       // Kembali ke halaman awal
                       Navigator.of(context).popUntil((route) => route.isFirst);
                     },
-                    icon: const Icon(Icons.home, color: Colors.grey),
+                    icon: const FaIcon(FontAwesomeIcons.home, color: Colors.grey),
                     label: Text("Kembali ke Struk Pembayaran", style: GoogleFonts.sora(color: Colors.grey.shade700, fontWeight: FontWeight.bold, fontSize: 13)),
                   ),
                 ),
@@ -405,7 +405,7 @@ class _UserReservationWhatsappScreenState extends State<UserReservationWhatsappS
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.info_outline, size: 14, color: Colors.grey.shade600),
+                    FaIcon(FontAwesomeIcons.infoCircle, size: 14, color: Colors.grey.shade600),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(

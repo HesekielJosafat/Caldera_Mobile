@@ -494,7 +494,7 @@ class _UserReservationDetailScreenState extends State<UserReservationDetailScree
                       padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(8)),
                       child: Row(
                         children: [
-                          const Icon(FontAwesomeIcons.clock, color: Colors.orange, size: 20), const SizedBox(width: 12),
+                          const FaIcon(FontAwesomeIcons.clock, color: Colors.orange, size: 20), const SizedBox(width: 12),
                           Expanded(child: Text("Reservasi Anda sedang menunggu konfirmasi. Silakan lakukan pembayaran DP untuk mengkonfirmasi reservasi.", style: GoogleFonts.sora(fontSize: 11, color: Colors.orange.shade900, height: 1.5))),
                         ],
                       ),
@@ -508,7 +508,7 @@ class _UserReservationDetailScreenState extends State<UserReservationDetailScree
                           final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => UserPaymentUploadScreen(bookingCode: res['booking_code'], amount: double.parse(res['down_payment'].toString()))));
                           if (result == true) Navigator.pop(context, true);
                         },
-                        icon: const Icon(FontAwesomeIcons.upload, color: Colors.white, size: 18),
+                        icon: const FaIcon(FontAwesomeIcons.upload, color: Colors.white, size: 18),
                         label: Text("Upload Bukti Pembayaran", style: GoogleFonts.sora(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                       ),
                     ),
@@ -518,7 +518,7 @@ class _UserReservationDetailScreenState extends State<UserReservationDetailScree
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade600, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
                         onPressed: _cancelReservation,
-                        icon: const Icon(FontAwesomeIcons.times, color: Colors.white, size: 18),
+                        icon: const FaIcon(FontAwesomeIcons.times, color: Colors.white, size: 18),
                         label: Text("Batalkan Reservasi", style: GoogleFonts.sora(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                       ),
                     )
