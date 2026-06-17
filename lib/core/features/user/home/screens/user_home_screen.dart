@@ -1,22 +1,17 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 
-// IMPORT SERVICE & GLOBAL WIDGETS
+// IMPORT SERVICE
 import '../../../../services/api_service.dart';
-import '../../../../widgets/app_footer.dart';
-// (Import app_header SUDAH DIHAPUS DARI SINI KARENA BIKIN DOBEL)
 
 // IMPORT HALAMAN NAVIGASI DALAM BERANDA
-import '../../pool/screens/user_facility_screen.dart'; 
-import '../../reservation/screens/user_reservation_screen.dart'; 
 import '../../menu/screens/user_menu_screen.dart'; 
 import '../../about/screens/user_about_screen.dart';
 import '../../gallery/screens/user_gallery_screen.dart';
 import '../../event_promo/screens/user_promo_screen.dart';
 import '../../testimoni/screens/user_testimoni_screen.dart';
-import '../../testimoni/screens/write_review_screen.dart';
+import '../../event_promo/screens/user_promo_detail_screen.dart';
 
 class UserHomeScreen extends StatefulWidget {
   const UserHomeScreen({Key? key}) : super(key: key);
@@ -24,7 +19,7 @@ class UserHomeScreen extends StatefulWidget {
   @override
   State<UserHomeScreen> createState() => _UserHomeScreenState();
 }
-// 1. TAMBAHKAN 'with WidgetsBindingObserver' DI SINI
+
 class _UserHomeScreenState extends State<UserHomeScreen> with WidgetsBindingObserver {
   final ApiService _apiService = ApiService();
   final Color primaryNavy = const Color(0xFF14334C);
@@ -38,30 +33,25 @@ class _UserHomeScreenState extends State<UserHomeScreen> with WidgetsBindingObse
   @override
   void initState() {
     super.initState();
-     // 2. DAFTARKAN OBSERVER SAAT HALAMAN DIBUKA
     WidgetsBinding.instance.addObserver(this); 
     _fetchAllData();
   }
 
   @override
   void dispose() {
-    // 3. CABUT OBSERVER SAAT HALAMAN DITUTUP
     WidgetsBinding.instance.removeObserver(this); 
     super.dispose();
   }
 
-  // 👇 4. INI ADALAH FUNGSI SAKTINYA (Deteksi aplikasi dibuka kembali) 👇
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // Jika aplikasi kembali dibuka dari background, otomatis ambil data terbaru!
-      print("Aplikasi dibuka kembali! Auto-refresh Beranda...");
-      _fetchAllData();
+      _fetchAllData(showLoading: false);
     }
   }
 
-  Future<void> _fetchAllData() async {
-    setState(() => _isLoading = true);
+  Future<void> _fetchAllData({bool showLoading = true}) async {
+    if (showLoading) setState(() => _isLoading = true);
     
     final results = await Future.wait([
       _apiService.getPromos(),
@@ -79,18 +69,22 @@ class _UserHomeScreenState extends State<UserHomeScreen> with WidgetsBindingObse
     }
   }
 
-  // 👇 FUNGSI BARU UNTUK MERAPIKAN FORMAT DISKON (Contoh: "40.00" -> "40% OFF") 👇
   String _formatDiscount(dynamic discountValue) {
     if (discountValue == null) return "Special Price";
-    
     String strValue = discountValue.toString();
-    
-    // Potong bagian desimal ".00" jika ada
     if (strValue.endsWith(".00")) {
       strValue = strValue.substring(0, strValue.length - 3);
     }
-    
     return "$strValue% OFF";
+  }
+
+  String _formatCurrency(String priceString) {
+    try {
+      double price = double.parse(priceString);
+      return NumberFormat('#,###', 'id_ID').format(price);
+    } catch (e) {
+      return priceString;
+    }
   }
 
   @override
@@ -99,28 +93,29 @@ class _UserHomeScreenState extends State<UserHomeScreen> with WidgetsBindingObse
       ? Center(child: CircularProgressIndicator(color: primaryNavy))
       : RefreshIndicator(
           color: activeGold,
-          onRefresh: _fetchAllData,
+          onRefresh: () => _fetchAllData(showLoading: true),
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // HEADER GANDA SUDAH DIHAPUS DARI SINI. 
-                // Langsung mulai dari Hero Section.
-                _buildHeroSection(),
-                _buildQuickLinks(),
-                _buildSectionHeader("Special Offers", "Exclusive deals every week at Caldera"),
-                _buildOffersSection(),
-                _buildAtmosphereSection(),
-                _buildSectionHeader("Discover What's New", "Fresh flavors, new creations, and fan favorites"),
-                _buildFeaturedMenuSection(),
-                _buildSectionHeader("What Our Customers Say", "Real experiences from real people"),
-                _buildTestimonialSection(),
-                // _buildSectionHeader("Events Not to Be Missed", "Get in on the action at Caldera"),
-                // _buildEventsSection(),
-                _buildSectionHeader("Plan Your Visit", "Location, operational hours, and contact"),
-                const GlobalAppFooter(),
-                const SizedBox(height: 40),
+                _buildHeroBanner(),
+                _buildQuickActions(),
+                
+                // SECTION PROMO (HANYA YANG MASIH AKTIF, TANPA TOMBOL LIHAT SEMUA)
+                _buildSectionHeader("Spesial Untukmu", "Exclusive deals every week at Caldera"),
+                _buildPromoCarousel(),
+
+                // SECTION MENU REKOMENDASI (TANPA TOMBOL LIHAT SEMUA)
+                _buildSectionHeader("Menu Pilihan", "Fresh flavors, new creations, and fan favorites"),
+                _buildFeaturedMenuCarousel(),
+
+                // SECTION TESTIMONI (HANYA BINTANG 4-5, TANPA TOMBOL LIHAT SEMUA)
+                _buildSectionHeader("Kata Mereka", "Real experiences from real people"),
+                _buildTestimonialCarousel(),
+
+                // Footer Plan Your Visit sudah dipindahkan ke layar About Us.
+                const SizedBox(height: 40), 
               ],
             ),
           ),
@@ -131,387 +126,280 @@ class _UserHomeScreenState extends State<UserHomeScreen> with WidgetsBindingObse
   // WIDGET COMPONENTS 
   // ==========================================
 
-  Widget _buildHeroSection() {
+  Widget _buildHeroBanner() {
     return Container(
+      margin: const EdgeInsets.fromLTRB(20, 20, 20, 10),
       width: double.infinity,
-      height: 350,
-      decoration: const BoxDecoration(
-        image: DecorationImage(
+      height: 180,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 5))],
+        image: const DecorationImage(
           image: AssetImage('assets/images/home.jpeg'), 
           fit: BoxFit.cover,
         ),
       ),
       child: Container(
         decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
           gradient: LinearGradient(
-            begin: Alignment.topCenter, end: Alignment.bottomCenter,
-            colors: [const Color(0xFF14334C).withOpacity(0.5), const Color(0xFF14334C).withOpacity(0.8)],
+            begin: Alignment.centerLeft, end: Alignment.centerRight,
+            colors: [primaryNavy.withOpacity(0.8), Colors.transparent],
           )
         ),
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            RichText(
-              textAlign: TextAlign.center,
-              text: TextSpan(
-                style: GoogleFonts.playfairDisplay(fontSize: 36, fontWeight: FontWeight.bold),
-                children: [
-                  TextSpan(text: 'Caldera ', style: TextStyle(color: activeGold)),
-                  const TextSpan(text: 'Resto & Pool', style: TextStyle(color: Colors.white)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
             Text(
-              "Experience the perfect blend of culinary delight and refreshing pool experience",
-              textAlign: TextAlign.center,
-              style: GoogleFonts.sora(color: Colors.white70, fontSize: 13),
+              "Selamat Datang di",
+              style: GoogleFonts.sora(color: Colors.white70, fontSize: 12),
             ),
-            const SizedBox(height: 30),
-            // Row(
-            //   children: [
-            //     Expanded(
-            //       child: ElevatedButton.icon(
-            //         style: ElevatedButton.styleFrom(backgroundColor: activeGold, padding: const EdgeInsets.symmetric(vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
-            //         onPressed: () {
-            //           Navigator.push(context, MaterialPageRoute(builder: (context) => const UserReservationScreen()));
-            //         },
-            //         icon: const Icon(Icons.calendar_today, color: Colors.white, size: 16),
-            //         label: Text("Book a Table", style: GoogleFonts.sora(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-            //       ),
-            //     ),
-            //     const SizedBox(width: 12),
-            //     Expanded(
-            //       child: OutlinedButton.icon(
-            //         style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white, width: 2), padding: const EdgeInsets.symmetric(vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
-            //         onPressed: () {
-            //           Navigator.push(context, MaterialPageRoute(builder: (context) => const UserPoolScreen()));
-            //         },
-            //         icon: const Icon(Icons.confirmation_number, color: Colors.white, size: 16),
-            //         label: Text("Pool Ticket", style: GoogleFonts.sora(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-            //       ),
-            //     ),
-            //   ],
-            // )
+            const SizedBox(height: 4),
+            Text(
+              "Caldera\nResto & Pool",
+              style: GoogleFonts.playfairDisplay(color: activeGold, fontSize: 26, fontWeight: FontWeight.bold, height: 1.1),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildQuickLinks() {
-    return Container(
-      transform: Matrix4.translationValues(0.0, -20.0, 0.0), 
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 5))],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildGridItem(Icons.info_outline, "About Us", () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const UserAboutScreen()));
-            }),
-            _buildGridItem(Icons.local_offer, "Promo", () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const UserPromoScreen()));
-            }),
-            _buildGridItem(Icons.photo_library, "Gallery", () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const UserGalleryScreen()));
-            }),
-            _buildGridItem(Icons.star_outline, "Testimoni", () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const UserTestimoniScreen()));
-            }),
-          ],
-        ),
+  Widget _buildQuickActions() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _buildActionItem(Icons.info_outline, "About", () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UserAboutScreen()))),
+          _buildActionItem(Icons.local_offer_outlined, "Promo", () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UserPromoScreen()))),
+          _buildActionItem(Icons.photo_library_outlined, "Gallery", () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UserGalleryScreen()))),
+          _buildActionItem(Icons.star_outline, "Ulasan", () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UserTestimoniScreen()))),
+        ],
       ),
     );
   }
 
-  Widget _buildGridItem(IconData icon, String label, VoidCallback onTap) {
+  Widget _buildActionItem(IconData icon, String label, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: Colors.blue.shade50, shape: BoxShape.circle),
-            child: Icon(icon, color: primaryNavy, size: 20),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 4))],
+              border: Border.all(color: Colors.grey.shade100)
+            ),
+            child: Icon(icon, color: primaryNavy, size: 24),
           ),
           const SizedBox(height: 8),
-          Text(label, style: GoogleFonts.sora(fontSize: 9, fontWeight: FontWeight.bold, color: primaryNavy)),
+          Text(label, style: GoogleFonts.sora(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.black87)),
         ],
       ),
     );
   }
 
+  // Header dimodifikasi (tanpa tombol lihat semua)
   Widget _buildSectionHeader(String title, String subtitle) {
     return Padding(
-      padding: const EdgeInsets.only(top: 20, bottom: 20),
-      child: Center(
-        child: Column(
-          children: [
-            Text(title, style: GoogleFonts.playfairDisplay(fontSize: 24, fontWeight: FontWeight.bold, color: primaryNavy)),
-            Container(margin: const EdgeInsets.symmetric(vertical: 10), width: 50, height: 3, decoration: BoxDecoration(color: activeGold, borderRadius: BorderRadius.circular(2))),
-            Text(subtitle, style: GoogleFonts.sora(fontSize: 12, color: Colors.grey.shade600), textAlign: TextAlign.center),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOffersSection() {
-    final offers = _promos.where((p) => (p['is_active'] == 1 || p['is_active'] == true) && p['promo_type'] != 'event').toList();
-
-    if (offers.isEmpty) {
-      return Center(
-        child: Column(
-          children: [
-            Text("No active promos at the moment", style: GoogleFonts.sora(color: Colors.grey, fontSize: 13)),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: activeGold, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => const UserPromoScreen()));
-              },
-              child: Text("Lihat Semua Promo", style: GoogleFonts.sora(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-            )
-          ],
-        ),
-      );
-    }
-
-    return Column(
-      children: [
-        SizedBox(
-          height: 200,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: offers.length,
-            itemBuilder: (context, index) {
-              final promo = offers[index];
-              return Container(
-                width: 280, margin: const EdgeInsets.only(right: 16), padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border(top: BorderSide(color: activeGold, width: 3)), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)]),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center, mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4), decoration: BoxDecoration(color: activeGold, borderRadius: BorderRadius.circular(20)), child: Text(promo['promo_type'] == 'ticket' ? 'Ticket Promo' : 'Food Promo', style: GoogleFonts.sora(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))),
-                    const SizedBox(height: 12),
-                    Text(promo['title'] ?? '', style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.bold, color: primaryNavy), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 8),
-                    Text(_formatDiscount(promo['discount_value']), style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.bold, color: activeGold)),
-                    const SizedBox(height: 8),
-                    Text(promo['description'] ?? '', style: GoogleFonts.sora(fontSize: 11, color: Colors.grey), textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 16),
-        Center(
-          child: OutlinedButton(
-            style: OutlinedButton.styleFrom(side: BorderSide(color: activeGold), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
-            onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const UserPromoScreen()));
-            },
-            child: Text("View All Promos", style: GoogleFonts.sora(color: activeGold, fontSize: 12, fontWeight: FontWeight.bold)),
-          ),
-        )
-      ],
-    );
-  }
-
-  Widget _buildAtmosphereSection() {
-    return Container(
-      margin: const EdgeInsets.only(top: 40), padding: const EdgeInsets.all(24), color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("Legendary Atmosphere", style: GoogleFonts.playfairDisplay(fontSize: 24, fontWeight: FontWeight.bold, color: primaryNavy)),
-          Container(margin: const EdgeInsets.symmetric(vertical: 10), width: 50, height: 3, decoration: BoxDecoration(color: activeGold, borderRadius: BorderRadius.circular(2))),
-          const SizedBox(height: 10),
-          Text("There's nothing better than spending time with family and friends in the best atmosphere.", style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
-          const SizedBox(height: 10),
-          Text("Whether you're looking for a relaxing swim, a delicious meal with loved ones, or a place to celebrate special occasions, Caldera offers the perfect setting.", style: GoogleFonts.sora(fontSize: 12, color: Colors.grey.shade600, height: 1.5)),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: activeGold, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))), 
-            onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const UserAboutScreen()));
-            }, 
-            child: Text("Learn More", style: GoogleFonts.sora(color: Colors.white, fontWeight: FontWeight.bold))
-          ),
+          Text(title, style: GoogleFonts.playfairDisplay(fontSize: 22, fontWeight: FontWeight.bold, color: primaryNavy)),
+          const SizedBox(height: 4),
+          Text(subtitle, style: GoogleFonts.sora(fontSize: 11, color: Colors.grey.shade600)),
         ],
       ),
     );
   }
 
-  Widget _buildFeaturedMenuSection() {
-    final featuredMenus = _menus.where((m) => m['is_recommended'] == 1 || m['is_recommended'] == true).take(5).toList();
+  Widget _buildPromoCarousel() {
+    // 👈 FILTER: HANYA PROMO AKTIF (MASIH BERLAKU) DAN BUKAN EVENT 👇
+    final activeOffers = _promos.where((p) {
+      bool isActive = p['is_active'] == 1 || p['is_active'] == true;
+      bool isNotEvent = p['promo_type'] != 'event';
+      
+      // Tambahan opsional: Cek end_date jika Anda ingin lebih ketat memfilter dari sisi mobile
+      bool isNotExpired = true;
+      if (p['end_date'] != null) {
+        DateTime endDate = DateTime.parse(p['end_date'].toString());
+        isNotExpired = endDate.isAfter(DateTime.now());
+      }
+      
+      return isActive && isNotEvent && isNotExpired;
+    }).toList();
 
-    if (featuredMenus.isEmpty) return Center(child: Text("No featured menus available", style: GoogleFonts.sora(color: Colors.grey)));
-
-    return Column(
-      children: [
-        SizedBox(
-          height: 220,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: featuredMenus.length,
-            itemBuilder: (context, index) {
-              final menu = featuredMenus[index];
-              String imgUrl = menu['image_url'] ?? menu['image'] ?? '';
-              if (imgUrl.isNotEmpty && !imgUrl.startsWith('http')) imgUrl = '${ApiService.baseUrl.replaceAll('/api', '')}/storage/$imgUrl';
-
-              return Container(
-                width: 160, margin: const EdgeInsets.only(right: 16), padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ClipRRect(borderRadius: BorderRadius.circular(50), child: imgUrl.isNotEmpty ? Image.network(imgUrl, width: 80, height: 80, fit: BoxFit.cover, errorBuilder: (c,e,s) => Icon(Icons.fastfood, size: 40, color: activeGold)) : Icon(Icons.fastfood, size: 40, color: activeGold)),
-                    const SizedBox(height: 16),
-                    Text(menu['name'] ?? '', style: GoogleFonts.sora(fontSize: 12, fontWeight: FontWeight.bold, color: primaryNavy), textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 8),
-                    Text("Rp ${menu['price']}", style: GoogleFonts.sora(fontSize: 12, fontWeight: FontWeight.bold, color: activeGold)),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 16),
-        Center(
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: activeGold, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
-            onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const UserMenuScreen()));
-            },
-            child: Text("View Full Menu", style: GoogleFonts.sora(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-          ),
-        )
-      ],
-    );
-  }
-
-  Widget _buildTestimonialSection() {
-    final approvedTesti = _testimonials.where((t) => t['is_approved'] == 1 || t['is_approved'] == true).take(5).toList();
-
-    if (approvedTesti.isEmpty) return Center(child: Text("No testimonials yet.", style: GoogleFonts.sora(color: Colors.grey)));
-
-    return Column(
-      children: [
-        SizedBox(
-          height: 200,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: approvedTesti.length,
-            itemBuilder: (context, index) {
-              final testi = approvedTesti[index];
-              int rating = int.tryParse(testi['rating'].toString()) ?? 5;
-
-              return Container(
-                width: 280, margin: const EdgeInsets.only(right: 16), padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(children: List.generate(5, (i) => Icon(i < rating ? Icons.star : Icons.star_border, color: activeGold, size: 14))),
-                    const SizedBox(height: 12),
-                    Expanded(child: Text('"${testi['comment'] ?? ''}"', style: GoogleFonts.sora(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey.shade700), overflow: TextOverflow.fade)),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        CircleAvatar(backgroundColor: primaryNavy, radius: 16, child: Text((testi['customer_name'] ?? 'U')[0], style: const TextStyle(color: Colors.white, fontSize: 12))),
-                        const SizedBox(width: 8),
-                        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(testi['customer_name'] ?? '', style: GoogleFonts.sora(fontSize: 12, fontWeight: FontWeight.bold)), Text("Visitor", style: GoogleFonts.sora(fontSize: 10, color: Colors.grey))])
-                      ],
-                    )
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            OutlinedButton(
-              style: OutlinedButton.styleFrom(side: BorderSide(color: activeGold), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => const UserTestimoniScreen()));
-              },
-              child: Text("Read All Reviews", style: GoogleFonts.sora(color: activeGold, fontSize: 11, fontWeight: FontWeight.bold)),
-            ),
-            const SizedBox(width: 12),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: activeGold, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => const WriteReviewScreen()));
-              },
-              icon: const Icon(Icons.star, size: 14, color: Colors.white),
-              label: Text("Write a Review", style: GoogleFonts.sora(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-            ),
-          ],
-        )
-      ],
-    );
-  }
-
-  Widget _buildEventsSection() {
-    final events = _promos.where((p) => p['is_active'] == 1 && p['promo_type'] == 'event').toList();
-
-    // if (events.isEmpty) {
-    //   return Center(
-    //     child: Container(
-    //       width: 250,
-    //       padding: const EdgeInsets.all(20),
-    //       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
-    //       child: Column(
-    //         mainAxisAlignment: MainAxisAlignment.center,
-    //         children: [
-    //           Icon(Icons.music_note, size: 40, color: activeGold),
-    //           const SizedBox(height: 16),
-    //           Text("Live Music Every Friday", style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.bold, color: primaryNavy), textAlign: TextAlign.center),
-    //           const SizedBox(height: 8),
-    //           Text("Enjoy live acoustic performances\n7 PM - 10 PM", style: GoogleFonts.sora(fontSize: 11, color: Colors.grey), textAlign: TextAlign.center),
-    //           const SizedBox(height: 12),
-    //           Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: activeGold, borderRadius: BorderRadius.circular(20)), child: Text("Free Entry", style: GoogleFonts.sora(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)))
-    //         ],
-    //       ),
-    //     ),
-    //   );
-    // }
+    if (activeOffers.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        child: Text("Belum ada promo aktif saat ini.", style: GoogleFonts.sora(color: Colors.grey, fontSize: 12)),
+      );
+    }
 
     return SizedBox(
-      height: 220,
+      height: 140,
       child: ListView.builder(
-        scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), itemCount: events.length,
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: activeOffers.length,
         itemBuilder: (context, index) {
-          final event = events[index];
+          final promo = activeOffers[index];
+          String type = promo['promo_type'] == 'ticket' ? 'Tiket' : 'Menu';
+
+          return GestureDetector(
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UserPromoDetailScreen(promo: promo))),
+            child: Container(
+              width: 240, margin: const EdgeInsets.symmetric(horizontal: 8), padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white, borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.shade200),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), 
+                    decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(8)), 
+                    child: Text("Promo $type", style: GoogleFonts.sora(color: Colors.red.shade700, fontSize: 9, fontWeight: FontWeight.bold))
+                  ),
+                  const Spacer(),
+                  Text(promo['title'] ?? '', style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 4),
+                  Text(_formatDiscount(promo['discount_value']), style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.bold, color: activeGold)),
+                  const SizedBox(height: 4),
+                  Text("Gunakan kode: ${promo['promo_code'] ?? '-'}", style: GoogleFonts.sora(fontSize: 10, color: Colors.grey), maxLines: 1, overflow: TextOverflow.ellipsis),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFeaturedMenuCarousel() {
+    // 👈 FILTER: HANYA MENU YANG DIREKOMENDASIKAN ADMIN 👇
+    final featuredMenus = _menus.where((m) => m['is_recommended'] == 1 || m['is_recommended'] == true).take(6).toList();
+
+    if (featuredMenus.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        child: Text("Belum ada menu rekomendasi.", style: GoogleFonts.sora(color: Colors.grey, fontSize: 12)),
+      );
+    }
+
+    return SizedBox(
+      height: 200,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal, 
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16), 
+        itemCount: featuredMenus.length,
+        itemBuilder: (context, index) {
+          final menu = featuredMenus[index];
+          
+          String imgUrl = menu['image_url'] ?? menu['image'] ?? '';
+          if (imgUrl.isNotEmpty && !imgUrl.startsWith('http')) {
+            imgUrl = '${ApiService.baseUrl.replaceAll('/api', '')}/storage/$imgUrl';
+          }
+
           return Container(
-            width: 250, margin: const EdgeInsets.only(right: 16), padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
+            width: 150, margin: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: Colors.white, borderRadius: BorderRadius.circular(16), 
+              border: Border.all(color: Colors.grey.shade200),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+            ),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.event, size: 40, color: activeGold),
-                const SizedBox(height: 16),
-                Text(event['title'] ?? '', style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.bold, color: primaryNavy), textAlign: TextAlign.center, maxLines: 1),
-                const SizedBox(height: 8),
-                Text(event['description'] ?? '', style: GoogleFonts.sora(fontSize: 11, color: Colors.grey), textAlign: TextAlign.center, maxLines: 2),
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), 
+                  child: imgUrl.isNotEmpty 
+                      ? Image.network(imgUrl, width: 150, height: 110, fit: BoxFit.cover, errorBuilder: (c,e,s) => _fallbackMenuImage()) 
+                      : _fallbackMenuImage()
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(menu['name'] ?? '', style: GoogleFonts.sora(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 6),
+                      Text("Rp ${_formatCurrency(menu['price']?.toString() ?? '0')}", style: GoogleFonts.sora(fontSize: 12, fontWeight: FontWeight.bold, color: primaryNavy)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _fallbackMenuImage() {
+    return Container(
+      width: 150, height: 110, color: Colors.grey.shade100,
+      child: Icon(Icons.fastfood, size: 30, color: Colors.grey.shade300),
+    );
+  }
+
+  Widget _buildTestimonialCarousel() {
+    // 👈 FILTER: HANYA TESTIMONI APPROVED & BINTANG 4-5 SAJA 👇
+    final bestTesti = _testimonials.where((t) {
+      bool isApproved = t['is_approved'] == 1 || t['is_approved'] == true;
+      int rating = int.tryParse(t['rating'].toString()) ?? 0;
+      return isApproved && rating >= 4; // Hanya bintang 4 dan 5
+    }).take(6).toList();
+
+    if (bestTesti.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        child: Text("Belum ada ulasan terbaik.", style: GoogleFonts.sora(color: Colors.grey, fontSize: 12)),
+      );
+    }
+
+    return SizedBox(
+      height: 150,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal, 
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16), 
+        itemCount: bestTesti.length,
+        itemBuilder: (context, index) {
+          final testi = bestTesti[index];
+          int rating = int.tryParse(testi['rating'].toString()) ?? 5;
+
+          return Container(
+            width: 280, margin: const EdgeInsets.symmetric(horizontal: 8), padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white, borderRadius: BorderRadius.circular(16), 
+              border: Border.all(color: Colors.grey.shade200),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: List.generate(5, (i) => Icon(i < rating ? Icons.star : Icons.star_border, color: activeGold, size: 14))),
                 const SizedBox(height: 12),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => const UserPromoScreen()));
-                  },
-                  child: Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: activeGold, borderRadius: BorderRadius.circular(20)), child: Text("Lihat Detail", style: GoogleFonts.sora(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)))
+                Expanded(child: Text('"${testi['comment'] ?? ''}"', style: GoogleFonts.sora(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey.shade700, height: 1.4), overflow: TextOverflow.fade)),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    CircleAvatar(backgroundColor: primaryNavy, radius: 14, child: Text((testi['customer_name'] ?? 'U')[0], style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))),
+                    const SizedBox(width: 8),
+                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(testi['customer_name'] ?? '', style: GoogleFonts.sora(fontSize: 12, fontWeight: FontWeight.bold)), Text("Caldera Guest", style: GoogleFonts.sora(fontSize: 10, color: Colors.grey))])
+                  ],
                 )
               ],
             ),

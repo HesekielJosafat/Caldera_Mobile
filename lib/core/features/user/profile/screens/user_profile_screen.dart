@@ -41,6 +41,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> with WidgetsBindi
   bool _obscureNew = true;
   bool _obscureConfirm = true;
 
+  // 👇 STATE UNTUK KEKUATAN PASSWORD BARU 👇
+  double _passwordStrength = 0.0;
+  String _passwordStrengthText = '';
+  Color _passwordStrengthColor = Colors.transparent;
+
   @override
   void initState() {
     super.initState();
@@ -137,17 +142,67 @@ class _UserProfileScreenState extends State<UserProfileScreen> with WidgetsBindi
     }
   }
 
+  // 👇 FUNGSI CEK KEKUATAN PASSWORD REAL-TIME 👇
+  void _checkPasswordStrength(String password) {
+    if (password.isEmpty) {
+      setState(() {
+        _passwordStrength = 0.0;
+        _passwordStrengthText = '';
+        _passwordStrengthColor = Colors.transparent;
+      });
+      return;
+    }
+
+    int score = 0;
+    if (password.length >= 8) score++;
+    if (password.contains(RegExp(r'[A-Z]'))) score++; // Huruf Kapital
+    if (password.contains(RegExp(r'[0-9]'))) score++; // Angka
+    if (password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) score++; // Karakter Khusus
+
+    setState(() {
+      _passwordStrength = score / 4;
+      if (score <= 1) {
+        _passwordStrengthText = 'Sangat Lemah (Bahaya)';
+        _passwordStrengthColor = Colors.red;
+      } else if (score == 2) {
+        _passwordStrengthText = 'Lemah';
+        _passwordStrengthColor = Colors.orange;
+      } else if (score == 3) {
+        _passwordStrengthText = 'Sedang';
+        _passwordStrengthColor = Colors.amber.shade600;
+      } else {
+        _passwordStrengthText = 'Kuat (Aman)';
+        _passwordStrengthColor = Colors.green;
+      }
+    });
+  }
+
   Future<void> _changePassword() async {
     if (_oldPasswordCtrl.text.isEmpty || _newPasswordCtrl.text.isEmpty || _confirmPasswordCtrl.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Semua field password wajib diisi")));
       return;
     }
-    if (_newPasswordCtrl.text != _confirmPasswordCtrl.text) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Konfirmasi password tidak cocok", style: TextStyle(color: Colors.white)), backgroundColor: Colors.red));
-      return;
-    }
+
+    // 👇 VALIDASI SYARAT PASSWORD SAAT DISIMPAN 👇
     if (_newPasswordCtrl.text.length < 8) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Password baru minimal 8 karakter", style: TextStyle(color: Colors.white)), backgroundColor: Colors.orange));
+      return;
+    }
+    if (!_newPasswordCtrl.text.contains(RegExp(r'[A-Z]'))) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Password baru harus memiliki minimal 1 huruf kapital", style: TextStyle(color: Colors.white)), backgroundColor: Colors.orange));
+      return;
+    }
+    if (!_newPasswordCtrl.text.contains(RegExp(r'[0-9]'))) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Password baru harus memiliki minimal 1 angka", style: TextStyle(color: Colors.white)), backgroundColor: Colors.orange));
+      return;
+    }
+    if (!_newPasswordCtrl.text.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Password baru harus memiliki minimal 1 karakter khusus (cth: ! @ #)", style: TextStyle(color: Colors.white)), backgroundColor: Colors.orange));
+      return;
+    }
+
+    if (_newPasswordCtrl.text != _confirmPasswordCtrl.text) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Konfirmasi password tidak cocok", style: TextStyle(color: Colors.white)), backgroundColor: Colors.red));
       return;
     }
 
@@ -169,6 +224,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> with WidgetsBindi
       _oldPasswordCtrl.clear();
       _newPasswordCtrl.clear();
       _confirmPasswordCtrl.clear();
+      // Reset indicator
+      setState(() {
+        _passwordStrength = 0.0;
+        _passwordStrengthText = '';
+        _passwordStrengthColor = Colors.transparent;
+      });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message'] ?? "Password lama salah atau terjadi kesalahan", style: const TextStyle(color: Colors.white)), backgroundColor: Colors.red));
     }
@@ -226,7 +287,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with WidgetsBindi
                   children: [
                     // --- BACKGROUND BIRU NAVY DI ATAS ---
                     Container(
-                      height: 220, // Tinggi background biru
+                      height: 220, 
                       width: double.infinity,
                       decoration: const BoxDecoration(
                         color: primaryNavy,
@@ -242,10 +303,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> with WidgetsBindi
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: Column(
                         children: [
-                          const SizedBox(height: 60), // Jarak aman dari atas
+                          const SizedBox(height: 60), 
 
                           // ==========================================
-                          // 1. KARTU PROFIL UTAMA (Menggantung di atas biru)
+                          // 1. KARTU PROFIL UTAMA (Info & Menu Riwayat)
                           // ==========================================
                           Container(
                             width: double.infinity,
@@ -257,7 +318,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> with WidgetsBindi
                             ),
                             child: Column(
                               children: [
-                                // Avatar Bulat
                                 Container(
                                   padding: const EdgeInsets.all(4),
                                   decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: activeGold, width: 2.5)),
@@ -269,18 +329,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> with WidgetsBindi
                                 ),
                                 const SizedBox(height: 16),
                                 
-                                // Info Nama & Email
                                 Text(_userName, style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.bold, color: primaryNavy)),
                                 const SizedBox(height: 6),
                                 Text(_userEmail, style: GoogleFonts.sora(fontSize: 13, color: Colors.grey.shade600)),
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 12),
                                 
-                                // Lencana Member
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                                   decoration: BoxDecoration(
                                     color: activeGold.withAlpha(20), 
                                     borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(color: activeGold, width: 1.5),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -296,7 +355,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> with WidgetsBindi
                                 ),
                                 const SizedBox(height: 24),
                                 
-                                // Tombol Riwayat
                                 Row(
                                   children: [
                                     Expanded(
@@ -413,8 +471,50 @@ class _UserProfileScreenState extends State<UserProfileScreen> with WidgetsBindi
                                 _buildPasswordField(_oldPasswordCtrl, "Masukkan password saat ini", _obscureOld, () => setState(() => _obscureOld = !_obscureOld)),
                                 const SizedBox(height: 16),
                                 
+                                // 👇 PASSWORD BARU DGN DETEKSI REAL-TIME 👇
                                 _buildLabel("Password Baru"),
-                                _buildPasswordField(_newPasswordCtrl, "Minimal 8 karakter", _obscureNew, () => setState(() => _obscureNew = !_obscureNew)),
+                                _buildPasswordField(
+                                  _newPasswordCtrl,
+                                  "Masukkan password baru",
+                                  _obscureNew, 
+                                  () => setState(() => _obscureNew = !_obscureNew),
+                                  onChanged: _checkPasswordStrength, 
+                                ),
+                                
+                                // TEKS SYARAT PASSWORD (Di bawah field)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8.0, left: 4.0),
+                                  child: Text(
+                                    '* Syarat: Min. 8 karakter, ada huruf kapital, angka & simbol.',
+                                    style: GoogleFonts.sora(fontSize: 10, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+                                  ),
+                                ),
+
+                                // WIDGET INDIKATOR KEKUATAN PASSWORD
+                                if (_newPasswordCtrl.text.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8.0, left: 4.0, right: 4.0),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(4),
+                                            child: LinearProgressIndicator(
+                                              value: _passwordStrength,
+                                              backgroundColor: Colors.grey.shade200,
+                                              color: _passwordStrengthColor,
+                                              minHeight: 6,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          _passwordStrengthText,
+                                          style: GoogleFonts.sora(fontSize: 10, fontWeight: FontWeight.bold, color: _passwordStrengthColor),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 const SizedBox(height: 16),
 
                                 _buildLabel("Konfirmasi Password Baru"),
@@ -491,10 +591,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> with WidgetsBindi
     );
   }
 
-  Widget _buildPasswordField(TextEditingController ctrl, String hint, bool isObscured, VoidCallback toggleVis) {
+  // 👇 DITAMBAHKAN onChanged PARAMETER 👇
+  Widget _buildPasswordField(TextEditingController ctrl, String hint, bool isObscured, VoidCallback toggleVis, {Function(String)? onChanged}) {
     return SizedBox(
       child: TextField(
         controller: ctrl, obscureText: isObscured, style: GoogleFonts.sora(fontSize: 13),
+        onChanged: onChanged, 
         decoration: InputDecoration(
           hintText: hint, hintStyle: GoogleFonts.sora(color: Colors.grey.shade400, fontSize: 13),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)), 
