@@ -304,10 +304,10 @@ class _UserTicketPaymentScreenState extends State<UserTicketPaymentScreen> {
     if (mounted) {
       setState(() => _isLoading = false);
       if (result['success'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Bukti berhasil diupload!")));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Bukti berhasil diupload!"), backgroundColor: Colors.green,));
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const UserMyTicketsScreen()));
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message'] ?? "Gagal upload")));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message'] ?? "Gagal upload"), backgroundColor: Colors.red,));
       }
     }
   }

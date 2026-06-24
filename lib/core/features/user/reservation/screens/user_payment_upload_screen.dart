@@ -88,7 +88,11 @@ class _UserPaymentUploadScreenState extends State<UserPaymentUploadScreen> {
       await _fetchNotifications();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Semua notifikasi ditandai dibaca"), backgroundColor: Colors.green, duration: Duration(seconds: 2)),
+          const SnackBar(
+            content: Text("Semua notifikasi ditandai dibaca"), 
+            backgroundColor: Colors.green, 
+            duration: Duration(seconds: 2),
+          ),
         );
       }
     } else {
@@ -124,12 +128,10 @@ class _UserPaymentUploadScreenState extends State<UserPaymentUploadScreen> {
   }
 
   // ==========================================
-  // POPUP NOTIFIKASI (FIXED REAL-TIME STATE SYNC)
+  // POPUP NOTIFIKASI
   // ==========================================
-  void _showNotificationPopup() async { // 1. Diubah menjadi async
-    
-    // Tampilkan loading kecil jika diperlukan, atau langsung tunggu datanya siap
-    await _fetchNotifications(); // 2. Ditambahkan await agar data list stabil sebelum popup terbuka
+  void _showNotificationPopup() async {
+    await _fetchNotifications();
 
     if (!mounted) return;
 
@@ -137,7 +139,6 @@ class _UserPaymentUploadScreenState extends State<UserPaymentUploadScreen> {
       context: context,
       barrierColor: Colors.transparent,
       builder: (context) {
-        // STATEFULBUILDER UNTUK POPUP REAL-TIME DI HALAMAN UPLOAD RESERVASI
         return StatefulBuilder(
           builder: (context, dialogSetState) {
             return Stack(
@@ -212,7 +213,7 @@ class _UserPaymentUploadScreenState extends State<UserPaymentUploadScreen> {
                                           leading: CircleAvatar(
                                             backgroundColor: const Color(0xFF14334C).withOpacity(0.1),
                                             child: Icon(
-                                              _getNotificationIcon(notif['title']), // MENGGUNAKAN IKON DINAMIS
+                                              _getNotificationIcon(notif['title']),
                                               color: const Color(0xFF14334C),
                                               size: 18,
                                             ),
@@ -234,7 +235,6 @@ class _UserPaymentUploadScreenState extends State<UserPaymentUploadScreen> {
                                               Text(_formatTime(notif['created_at']), style: GoogleFonts.sora(fontSize: 9, color: Colors.grey)),
                                             ],
                                           ),
-                                          // TOMBOL CENTANG DENGAN DIALOG SETSTATE DI HALAMAN UPLOAD RESERVASI
                                           trailing: isUnread 
                                             ? IconButton(
                                                 icon: const Icon(Icons.check_circle_outline, color: Colors.green, size: 20),
@@ -250,7 +250,6 @@ class _UserPaymentUploadScreenState extends State<UserPaymentUploadScreen> {
                                                 },
                                               ) 
                                             : null,
-                                          // JIKA NOTIFIKASI DI-TAP / DIKLIK
                                           onTap: () async {
                                             if (isUnread) {
                                               setState(() {
@@ -303,7 +302,12 @@ class _UserPaymentUploadScreenState extends State<UserPaymentUploadScreen> {
 
   Future<void> _uploadPayment() async {
     if (_selectedBank == null || _accountNameCtrl.text.isEmpty || _selectedImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Mohon lengkapi Bank, Nama, dan Bukti Transfer!")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Mohon lengkapi Bank, Nama, dan Bukti Transfer!"),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
 
@@ -315,19 +319,33 @@ class _UserPaymentUploadScreenState extends State<UserPaymentUploadScreen> {
       'transaction_id': _trxIdCtrl.text,
     };
 
-    // Panggil fungsi API Upload
     final result = await _apiService.uploadTablePayment(widget.bookingCode, payload, _selectedImage!);
 
-     if (mounted) {
+    if (mounted) {
       setState(() => _isLoading = false);
 
       if (result['success'] == true) {
-          Navigator.pushReplacement(
-            context, 
-            MaterialPageRoute(builder: (_) => UserReservationWhatsappScreen(waUrl: result['wa_url'] ?? "https://wa.me/6285272997806"))
-          );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Bukti transfer berhasil diunggah!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pushReplacement(
+          context, 
+          MaterialPageRoute(
+            builder: (_) => UserReservationWhatsappScreen(
+              waUrl: result['wa_url'] ?? "https://wa.me/6285272997806",
+            ),
+          ),
+        );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message'] ?? "Gagal upload")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? "Gagal upload"),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -340,11 +358,8 @@ class _UserPaymentUploadScreenState extends State<UserPaymentUploadScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       
-      // ==========================================
-      // APP HEADER CALDERA DGN NOTIFIKASI
-      // ==========================================
       appBar: AppBar(
-        automaticallyImplyLeading: false, // Menghilangkan tombol back default agar rapi (opsional)
+        automaticallyImplyLeading: false, 
         backgroundColor: primaryNavy,
         elevation: 0,
         title: RichText(
@@ -459,11 +474,8 @@ class _UserPaymentUploadScreenState extends State<UserPaymentUploadScreen> {
             ),
           ),
           
-      // ==========================================
-      // BOTTOM NAVBAR
-      // ==========================================
       bottomNavigationBar: CustomBottomNavBar(
-        selectedIndex: 2, // 2 = Tab Reservasi
+        selectedIndex: 2, 
         onItemTapped: (index) {
           Navigator.pushAndRemoveUntil(
             context,

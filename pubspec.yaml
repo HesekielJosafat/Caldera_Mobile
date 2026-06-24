@@ -2,7 +2,7 @@ name: caldera_app
 description: A mobile app for Caldera Resto and Pool
 publish_to: 'none' # karena ini proyek lokal
 
-version: 1.0.0+4
+version: 1.0.0+5
 
 environment:
   sdk: ">=3.0.0 <4.0.0"

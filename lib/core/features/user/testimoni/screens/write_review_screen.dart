@@ -417,19 +417,19 @@ class _WriteReviewScreenState extends State<WriteReviewScreen> {
 //             Text("Max 2MB. JPG, JPEG, or PNG", style: GoogleFonts.sora(fontSize: 10, color: Colors.grey)),
 //             const SizedBox(height: 24),
 
-//             // RATING STARS
-//             _buildLabel("Rating *"),
-//             Row(
-//               children: List.generate(5, (index) {
-//                 return IconButton(
-//                   padding: EdgeInsets.zero,
-//                   constraints: const BoxConstraints(),
-//                   icon: Icon(index < _selectedRating ? Icons.star : Icons.star_border, color: Colors.amber, size: 36),
-//                   onPressed: () => setState(() => _selectedRating = index + 1),
-//                 );
-//               }),
-//             ),
-//             const SizedBox(height: 20),
+             // RATING STARS
+            _buildLabel("Rating *"),
+            Row(
+              children: List.generate(5, (index) {
+                return IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: Icon(index < _selectedRating ? Icons.star : Icons.star_border, color: Colors.amber, size: 36),
+                  onPressed: () => setState(() => _selectedRating = index + 1),
+                );
+              }),
+            ),
+            const SizedBox(height: 20),
 
             // REVIEW TEXT
             _buildLabel("Your Review *"),
