@@ -8,8 +8,7 @@ class ApiService {
   // static const String baseUrl = 'http://10.0.2.2:8000/api';
   // static const String baseUrl = 'http://10.131.121.159:8000/api';
   // static const String baseUrl = 'http://127.0.0.1:8000/api';
-  // static const String baseUrl = 'http://52.221.212.121/api';
-  static const String baseUrl = 'http://caldera-resto-pool.duckdns.org/api';
+  static const String baseUrl = 'http://47.128.221.16/api';
 
   
   Future<Map<String, String>> _getHeaders() async {
@@ -124,8 +123,8 @@ class ApiService {
       
       final responseData = jsonDecode(response.body);
 
-      // 👇 INI DIA OBAT PENAWARNYA 👇
-      // Jika API membalas sukses, kita WAJIB update memori lokal HP (SharedPreferences)
+      
+      // Jika API membalas sukses, WAJIB update memori lokal HP (SharedPreferences)
       if (response.statusCode == 200 && responseData['success'] == true) {
         final prefs = await SharedPreferences.getInstance();
         final userStr = prefs.getString('user');

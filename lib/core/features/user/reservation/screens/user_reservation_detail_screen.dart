@@ -350,11 +350,11 @@ class _UserReservationDetailScreenState extends State<UserReservationDetailScree
       setState(() => _isLoading = false);
       if (success) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Reservasi berhasil dibatalkan")));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Reservasi berhasil dibatalkan"), backgroundColor: Colors.green,));
           Navigator.pop(context, true); 
         }
       } else {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Gagal membatalkan reservasi")));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Gagal membatalkan reservasi"), backgroundColor: Colors.red,));
       }
     }
   }

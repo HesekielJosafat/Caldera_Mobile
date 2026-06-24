@@ -361,15 +361,38 @@ class _UserTicketFormScreenState extends State<UserTicketFormScreen> {
     final result = await _apiService.buyTicket(payload);
 
     if (mounted) {
-      setState(() => _isLoading = false);
+  setState(() => _isLoading = false);
+
       if (result['success'] == true) {
-        // Pindah ke halaman sukses dan kirim data tiket
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => UserTicketSuccessScreen(ticketData: result['data'])),
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Tiket berhasil dipesan",
+              style: TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Colors.green,
+          ),
         );
+
+        await Future.delayed(const Duration(milliseconds: 800));
+
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => UserTicketSuccessScreen(
+                ticketData: result['data'],
+              ),
+            ),
+          );
+        }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message'] ?? "Gagal memesan tiket"), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? "Gagal memesan tiket"),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }

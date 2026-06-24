@@ -107,7 +107,7 @@ class _UserReservationScreenState extends State<UserReservationScreen> {
       
       // Jika sukses (Ada parameter success true atau ada object data)
       if (result['success'] == true || result['data'] != null || result['booking_code'] != null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Reservasi Berhasil!")));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Reservasi Berhasil!"), backgroundColor: Colors.green,));
         
         // Ambil data reservasi dari response Laravel (Biasanya di dalam array 'data')
         Map<String, dynamic> resData = result['data'] ?? result;
@@ -118,7 +118,7 @@ class _UserReservationScreenState extends State<UserReservationScreen> {
           MaterialPageRoute(builder: (_) => UserReservationSuccessScreen(reservationData: resData))
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message'] ?? "Gagal menyimpan reservasi")));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result['message'] ?? "Gagal membuat reservasi"), backgroundColor: Colors.red,));
       }
     }
   }

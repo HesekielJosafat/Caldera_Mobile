@@ -338,9 +338,9 @@ class _WriteReviewScreenState extends State<WriteReviewScreen> {
             _buildTextField(_nameController, "Enter your name"),
             const SizedBox(height: 16),
             
-            _buildLabel("Email (Optional)"),
-            _buildTextField(_emailController, "Enter your email"),
-            const SizedBox(height: 16),
+            // _buildLabel("Email (Optional)"),
+            // _buildTextField(_emailController, "Enter your email"),
+            // const SizedBox(height: 16),
 
             // SERVICE TYPE & VISIT DATE
             _buildLabel("Service Type"),
@@ -384,52 +384,52 @@ class _WriteReviewScreenState extends State<WriteReviewScreen> {
             const SizedBox(height: 16),
 
             // PHOTO UPLOAD
-            _buildLabel("Your Photo (Optional)"),
-Row(
-  children: [
-    ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.grey.shade200,
-        foregroundColor: Colors.black87,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(4),
-            side: BorderSide(color: Colors.grey.shade300)),
-      ),
-      // 1. Panggil fungsi _pickImage saat tombol ditekan
-                  onPressed: _pickImage, 
-                  child: Text("Choose File", style: GoogleFonts.sora(fontSize: 12)),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  // 2. Gunakan _selectedImage untuk menampilkan nama file
-                  child: Text(
-                    _selectedImage == null 
-                        ? "No file chosen" 
-                        : _selectedImage!.path.split('/').last, // Ambil nama file-nya saja
-                    style: GoogleFonts.sora(fontSize: 12, color: Colors.grey),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text("Max 2MB. JPG, JPEG, or PNG", style: GoogleFonts.sora(fontSize: 10, color: Colors.grey)),
-            const SizedBox(height: 24),
+//             _buildLabel("Your Photo (Optional)"),
+// Row(
+//   children: [
+//     ElevatedButton(
+//       style: ElevatedButton.styleFrom(
+//         backgroundColor: Colors.grey.shade200,
+//         foregroundColor: Colors.black87,
+//         elevation: 0,
+//         shape: RoundedRectangleBorder(
+//             borderRadius: BorderRadius.circular(4),
+//             side: BorderSide(color: Colors.grey.shade300)),
+//       ),
+//       // 1. Panggil fungsi _pickImage saat tombol ditekan
+//                   onPressed: _pickImage, 
+//                   child: Text("Choose File", style: GoogleFonts.sora(fontSize: 12)),
+//                 ),
+//                 const SizedBox(width: 12),
+//                 Expanded(
+//                   // 2. Gunakan _selectedImage untuk menampilkan nama file
+//                   child: Text(
+//                     _selectedImage == null 
+//                         ? "No file chosen" 
+//                         : _selectedImage!.path.split('/').last, // Ambil nama file-nya saja
+//                     style: GoogleFonts.sora(fontSize: 12, color: Colors.grey),
+//                     overflow: TextOverflow.ellipsis,
+//                   ),
+//                 ),
+//               ],
+//             ),
+//             const SizedBox(height: 4),
+//             Text("Max 2MB. JPG, JPEG, or PNG", style: GoogleFonts.sora(fontSize: 10, color: Colors.grey)),
+//             const SizedBox(height: 24),
 
-            // RATING STARS
-            _buildLabel("Rating *"),
-            Row(
-              children: List.generate(5, (index) {
-                return IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  icon: Icon(index < _selectedRating ? Icons.star : Icons.star_border, color: Colors.amber, size: 36),
-                  onPressed: () => setState(() => _selectedRating = index + 1),
-                );
-              }),
-            ),
-            const SizedBox(height: 20),
+//             // RATING STARS
+//             _buildLabel("Rating *"),
+//             Row(
+//               children: List.generate(5, (index) {
+//                 return IconButton(
+//                   padding: EdgeInsets.zero,
+//                   constraints: const BoxConstraints(),
+//                   icon: Icon(index < _selectedRating ? Icons.star : Icons.star_border, color: Colors.amber, size: 36),
+//                   onPressed: () => setState(() => _selectedRating = index + 1),
+//                 );
+//               }),
+//             ),
+//             const SizedBox(height: 20),
 
             // REVIEW TEXT
             _buildLabel("Your Review *"),
